@@ -2,15 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-
-type Venta = any;
+import Ticket from "@/app/components/Ticket";
 
 export default function DetalleVenta() {
   const router = useRouter();
   const params = useParams();
   const id = params.id as string;
 
-  const [venta, setVenta] = useState<Venta | null>(null);
+  const [venta, setVenta] = useState<any>(null);
   const [cargando, setCargando] = useState(true);
   const [accion, setAccion] = useState("");
   const [montoCobro, setMontoCobro] = useState(0);
@@ -66,7 +65,7 @@ export default function DetalleVenta() {
   }
 
   async function eliminar() {
-    if (!confirm("¿Eliminar esta venta? Esto no se puede deshacer.")) return;
+    if (!confirm("¿Eliminar esta venta? No se puede deshacer.")) return;
     setProcesando(true);
     setError("");
     try {
@@ -89,20 +88,26 @@ export default function DetalleVenta() {
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+      <div className="page-header">
         <div>
-          <h1 style={{ fontSize: 26 }}>Venta #{venta.numero}</h1>
-          <div style={{ color: "#64748b", fontSize: 14 }}>
+          <h1 className="page-title">Venta #{venta.numero}</h1>
+          <div className="page-subtitle">
             {new Date(venta.fecha).toLocaleString("es-AR")}
           </div>
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <button onClick={() => router.push("/ventas")} className="btn btn-secondary">
             Volver
           </button>
+          <button
+            onClick={() => setAccion(accion === "ticket" ? "" : "ticket")}
+            className="btn btn-secondary"
+          >
+            🖨️ {accion === "ticket" ? "Ocultar" : "Ver"} ticket
+          </button>
           {puedeCobrar && (
-            <button onClick={() => setAccion("cobrar")} className="btn btn-primary">
-              Cobrar
+            <button onClick={() => setAccion(accion === "cobrar" ? "" : "cobrar")} className="btn btn-primary">
+              💰 Cobrar
             </button>
           )}
           {!anulada && venta.estado_pago !== "pagada" && (
@@ -112,25 +117,49 @@ export default function DetalleVenta() {
           )}
           {!anulada && venta.estado_pago !== "pagada" && (
             <button onClick={eliminar} disabled={procesando} className="btn btn-danger">
-              Eliminar
+              🗑️ Eliminar
             </button>
           )}
         </div>
       </div>
 
       {anulada && (
-        <div style={{ background: "#fee2e2", color: "#991b1b", padding: 12, borderRadius: 6, marginBottom: 16 }}>
+        <div style={{ background: "#fee2e2", color: "#991b1b", padding: 12, borderRadius: 8, marginBottom: 16, fontWeight: 500 }}>
           ⚠️ Esta venta fue ANULADA
         </div>
       )}
 
       {error && (
-        <div style={{ background: "#fee2e2", color: "#991b1b", padding: 12, borderRadius: 6, marginBottom: 16 }}>
-          {error}
+        <div style={{ background: "#fee2e2", color: "#991b1b", padding: 12, borderRadius: 8, marginBottom: 16, fontWeight: 500 }}>
+          ⚠️ {error}
         </div>
       )}
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 20 }}>
+      {accion === "ticket" && (
+        <div style={{
+          marginBottom: 24,
+          display: "flex",
+          justifyContent: "center",
+          padding: 20,
+          background: "#f8fafc",
+          borderRadius: 12
+        }}>
+          <Ticket
+            tipo="Venta"
+            numero={venta.numero}
+            fecha={venta.fecha}
+            cliente={venta.cliente}
+            items={venta.items || []}
+            subtotal={venta.subtotal}
+            descuento={venta.descuento}
+            total={venta.total}
+            pagado={Number(venta.total) - saldo}
+            saldo={saldo}
+          />
+        </div>
+      )}
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 20 }} className="venta-grid">
         <div style={{ background: "white", padding: 20, borderRadius: 10, boxShadow: "0 1px 3px rgba(0,0,0,0.08)" }}>
           <h2 style={{ fontSize: 16, marginBottom: 14 }}>Items</h2>
           <table className="table" style={{ boxShadow: "none" }}>
