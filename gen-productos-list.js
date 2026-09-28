@@ -1,4 +1,6 @@
-import Link from "next/link";
+﻿const fs = require("fs");
+
+const content = `import Link from "next/link";
 
 async function fetchProductos() {
   const base = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
@@ -121,3 +123,7 @@ export default async function ProductosPage() {
     </div>
   );
 }
+`;
+
+fs.writeFileSync("src/app/productos/page.tsx", content, "utf8");
+console.log("OK: src/app/productos/page.tsx actualizado");
