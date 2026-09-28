@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
+import RecordatorioBoton from "@/app/components/RecordatorioBoton";
 
 export default function DetalleVehiculo() {
   const router = useRouter();
@@ -159,9 +160,14 @@ export default function DetalleVehiculo() {
             {vehiculo.placa} · {vehiculo.cliente?.nombre}
           </div>
         </div>
-        <button onClick={() => setEditando(true)} className="btn btn-primary">
-          ✏️ Editar
-        </button>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {vehiculo.cliente?.telefono && (
+            <RecordatorioBoton vehiculoId={vehiculo.id} />
+          )}
+          <button onClick={() => setEditando(true)} className="btn btn-primary">
+            ✏️ Editar
+          </button>
+        </div>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24 }} className="dashboard-columns">

@@ -1,4 +1,7 @@
-"use client";
+﻿const fs = require("fs");
+const path = require("path");
+
+const content = `"use client";
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
@@ -140,3 +143,9 @@ export default function BusquedaGlobal() {
     </div>
   );
 }
+`;
+
+const dir = path.dirname("src/app/components/BusquedaGlobal.tsx");
+if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+fs.writeFileSync("src/app/components/BusquedaGlobal.tsx", content, "utf8");
+console.log("OK: BusquedaGlobal.tsx");

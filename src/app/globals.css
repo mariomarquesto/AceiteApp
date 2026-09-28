@@ -1055,3 +1055,24 @@ html, body {
     gap: 12px;
   }
 }
+
+
+/* Wrapper de la búsqueda global */
+.navbar-search-wrapper {
+  width: 240px;
+  flex-shrink: 0;
+  margin-left: 8px;
+  margin-right: 8px;
+}
+
+@media (max-width: 1400px) {
+  .navbar-search-wrapper {
+    width: 180px;
+  }
+}
+
+@media (max-width: 1200px) {
+  .navbar-search-wrapper {
+    display: none;
+  }
+}

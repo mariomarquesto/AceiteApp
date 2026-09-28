@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
+import BusquedaGlobal from "./BusquedaGlobal";
 
 const links = [
   { href: "/", label: "Inicio", icon: "🏠" },
@@ -12,6 +13,7 @@ const links = [
   { href: "/ordenes", label: "Órdenes", icon: "🔧" },
   { href: "/ventas", label: "Ventas", icon: "💰" },
   { href: "/productos", label: "Productos", icon: "📦" },
+  { href: "/servicios", label: "Servicios", icon: "⚙️" },
   { href: "/cuenta-corriente", label: "Cta. cte.", icon: "📊" }
 ];
 
@@ -61,6 +63,10 @@ export default function Navbar() {
               </Link>
             );
           })}
+        </div>
+
+        <div className="navbar-search-wrapper">
+          <BusquedaGlobal />
         </div>
 
         <Link href="/ventas/nueva" className="navbar-cta">
