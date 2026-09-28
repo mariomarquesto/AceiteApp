@@ -1,4 +1,6 @@
-import Card from "./components/Card";
+﻿const fs = require("fs");
+
+const dashboard = `import Card from "./components/Card";
 import Link from "next/link";
 
 async function fetchJSON(path: string) {
@@ -28,6 +30,7 @@ export default async function Home() {
   const cobradoHoy = cierre.data?.total_cobrado || 0;
   const tareas = tareasResumen.data || { vencidas: 0, hoy: 0, proximos_7_dias: 0, completadas_hoy: 0 };
   const ordenesEnProceso = (ordenes.data || []).length;
+
   const totalTareasPendientes = tareas.vencidas + tareas.hoy + tareas.proximos_7_dias;
 
   const accesos = [
@@ -39,8 +42,9 @@ export default async function Home() {
         ? tareas.vencidas + " vencidas"
         : tareas.hoy > 0
           ? tareas.hoy + " para hoy"
-          : "Sin pendientes",
-      gradient: "linear-gradient(135deg, #f97316, #dc2626)"
+          : "Sin pendientes urgentes",
+      gradient: "linear-gradient(135deg, #f97316, #dc2626)",
+      highlight: tareas.vencidas > 0 || tareas.hoy > 0
     },
     {
       href: "/ordenes/nueva",
@@ -74,32 +78,31 @@ export default async function Home() {
         </div>
       </div>
 
-      {/* Alerta de tareas vencidas */}
+      {/* Alertas importantes */}
       {tareas.vencidas > 0 && (
         <Link href="/tareas" style={{ textDecoration: "none" }}>
           <div style={{
             background: "linear-gradient(135deg, #fef2f2, #fee2e2)",
             border: "2px solid #ef4444",
-            borderRadius: 14,
-            padding: 18,
-            marginBottom: 24,
+            borderRadius: 12,
+            padding: 16,
+            marginBottom: 20,
             display: "flex",
             alignItems: "center",
-            gap: 16,
+            gap: 14,
             cursor: "pointer",
-            boxShadow: "0 4px 16px rgba(239,68,68,0.2)",
-            transition: "all 0.2s"
+            boxShadow: "0 4px 12px rgba(239,68,68,0.15)"
           }}>
-            <div style={{ fontSize: 36 }}>🔴</div>
+            <div style={{ fontSize: 32 }}>🔴</div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 800, color: "#991b1b", fontSize: 17, letterSpacing: -0.3 }}>
-                {tareas.vencidas} {tareas.vencidas === 1 ? "tarea vencida" : "tareas vencidas"}
+              <div style={{ fontWeight: 700, color: "#991b1b", fontSize: 16 }}>
+                Tenés {tareas.vencidas} {tareas.vencidas === 1 ? "tarea vencida" : "tareas vencidas"}
               </div>
-              <div style={{ fontSize: 13, color: "#b91c1c", marginTop: 2 }}>
-                Contactá a esos clientes para recuperar ventas
+              <div style={{ fontSize: 13, color: "#b91c1c" }}>
+                Es momento de contactar a esos clientes
               </div>
             </div>
-            <div style={{ fontSize: 28, color: "#991b1b", fontWeight: 700 }}>→</div>
+            <div style={{ fontSize: 24, color: "#991b1b" }}>→</div>
           </div>
         </Link>
       )}
@@ -150,7 +153,13 @@ export default async function Home() {
       <div className="dashboard-grid" style={{ marginBottom: 32 }}>
         {accesos.map(a => (
           <Link key={a.href} href={a.href} className="quick-access">
-            <div className="quick-access-icon" style={{ background: a.gradient }}>
+            <div
+              className="quick-access-icon"
+              style={{
+                background: a.gradient,
+                boxShadow: a.highlight ? "0 0 0 4px rgba(239,68,68,0.2), 0 4px 12px rgba(0,0,0,0.15)" : "0 4px 12px rgba(0,0,0,0.15)"
+              }}
+            >
               {a.icon}
             </div>
             <div className="quick-access-content">
@@ -162,8 +171,9 @@ export default async function Home() {
         ))}
       </div>
 
-      {/* 2 columnas: Tareas + Stock bajo */}
+      {/* Tareas próximas + Stock bajo en 2 columnas */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }} className="dashboard-columns">
+        {/* Tareas de la semana */}
         <div className="form-card">
           <div style={{
             display: "flex",
@@ -172,7 +182,7 @@ export default async function Home() {
             marginBottom: 16
           }}>
             <h2 style={{ fontSize: 17, color: "#0f172a", fontWeight: 700 }}>
-              📅 Resumen de tareas
+              📅 Próximos 7 días
             </h2>
             <Link href="/tareas" style={{ fontSize: 13, color: "#0ea5e9", fontWeight: 600 }}>
               Ver todas →
@@ -184,14 +194,14 @@ export default async function Home() {
               display: "flex",
               justifyContent: "space-between",
               padding: "12px 14px",
-              background: "#fef2f2",
+              background: "#fef3c7",
               borderRadius: 8,
-              borderLeft: "3px solid #ef4444"
+              borderLeft: "3px solid #f59e0b"
             }}>
-              <span style={{ fontSize: 14, color: "#991b1b", fontWeight: 500 }}>
+              <span style={{ fontSize: 14, color: "#78350f", fontWeight: 500 }}>
                 🔴 Vencidas
               </span>
-              <span style={{ fontWeight: 700, color: "#991b1b" }}>{tareas.vencidas}</span>
+              <span style={{ fontWeight: 700, color: "#78350f" }}>{tareas.vencidas}</span>
             </div>
 
             <div style={{
@@ -238,6 +248,7 @@ export default async function Home() {
           </div>
         </div>
 
+        {/* Stock bajo */}
         <div className="form-card">
           <div style={{
             display: "flex",
@@ -296,3 +307,7 @@ export default async function Home() {
     </div>
   );
 }
+`;
+
+fs.writeFileSync("src/app/page.tsx", dashboard, "utf8");
+console.log("OK: page.tsx actualizado con CRM integrado");

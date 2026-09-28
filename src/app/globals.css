@@ -167,6 +167,109 @@ main {
 }
 
 /* ============================================
+   QUICK ACCESS
+   ============================================ */
+.quick-access {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px;
+  background: white;
+  border-radius: 14px;
+  border: 1px solid #e8eef5;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 4px 12px rgba(0,0,0,0.04);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  text-decoration: none;
+  color: inherit;
+}
+
+.quick-access::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(14,165,233,0.04), rgba(139,92,246,0.04));
+  opacity: 0;
+  transition: opacity 0.25s;
+}
+
+.quick-access:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(14,165,233,0.15), 0 4px 12px rgba(0,0,0,0.06);
+  border-color: #bae6fd;
+}
+
+.quick-access:hover::before {
+  opacity: 1;
+}
+
+.quick-access-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: white;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  transition: transform 0.25s;
+  position: relative;
+  z-index: 1;
+}
+
+.quick-access:hover .quick-access-icon {
+  transform: scale(1.08) rotate(-4deg);
+}
+
+.quick-access-content {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.quick-access-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 2px;
+  letter-spacing: -0.2px;
+}
+
+.quick-access-subtitle {
+  font-size: 12px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.quick-access-arrow {
+  font-size: 20px;
+  color: #cbd5e1;
+  transition: all 0.25s;
+  position: relative;
+  z-index: 1;
+  font-weight: 700;
+}
+
+.quick-access:hover .quick-access-arrow {
+  color: #0ea5e9;
+  transform: translateX(4px);
+}
+
+
+/* ============================================
+   RESPONSIVE - MOBILE FIRST FIX
+   ============================================ */
+
+/* Contenedor principal */
+main {
+  padding: 16px !important;
+}
+
+/* ============================================
    NAVBAR en móvil
    ============================================ */
 @media (max-width: 768px) {
@@ -647,4 +750,271 @@ html, body {
   font-weight: 700;
   letter-spacing: 1px;
   margin-top: 2px;
+}
+
+/* Columnas del dashboard (responsive) */
+.dashboard-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 900px) {
+  .dashboard-columns {
+    grid-template-columns: 1fr;
+  }
+}
+/* ============================================
+   NAVBAR
+   ============================================ */
+.navbar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+  transition: all 0.3s ease;
+  border-bottom: 1px solid transparent;
+}
+
+.navbar-scrolled {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+  border-bottom: 1px solid rgba(14,165,233,0.3);
+}
+
+.navbar-inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  height: 68px;
+  gap: 4px;
+}
+
+.navbar-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  transition: background 0.2s;
+  flex-shrink: 0;
+  margin-right: 8px;
+}
+
+.navbar-logo:hover {
+  background: rgba(56, 189, 248, 0.1);
+}
+
+.navbar-logo-icon {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+}
+
+.navbar-logo-text { line-height: 1.1; }
+
+.navbar-logo-title {
+  font-weight: 900;
+  font-size: 17px;
+  color: #ffffff;
+  letter-spacing: -0.5px;
+  line-height: 1;
+}
+
+.navbar-logo-sub {
+  font-size: 8px;
+  color: #38bdf8;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  margin-top: 2px;
+}
+
+.navbar-links {
+  display: flex;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 0 4px;
+}
+
+.navbar-links::-webkit-scrollbar {
+  display: none;
+}
+
+.navbar-link {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #cbd5e1;
+  background: transparent;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.navbar-link:hover {
+  background: rgba(56, 189, 248, 0.12);
+  color: #fff;
+}
+
+.navbar-link-active {
+  color: #fff;
+  font-weight: 700;
+  background: linear-gradient(135deg, rgba(14,165,233,0.25), rgba(139,92,246,0.25));
+  border: 1px solid rgba(56,189,248,0.4);
+  box-shadow: 0 0 16px rgba(14,165,233,0.2);
+}
+
+.navbar-link-icon { font-size: 14px; }
+
+.navbar-cta {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 9px 16px;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, #f97316, #ea580c);
+  box-shadow: 0 4px 14px rgba(249,115,22,0.4);
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  margin-left: 8px;
+  white-space: nowrap;
+}
+
+.navbar-cta:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(249,115,22,0.6);
+}
+
+.navbar-burger {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  width: 40px;
+  height: 40px;
+  padding: 8px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  border-radius: 8px;
+  flex-shrink: 0;
+  margin-left: 8px;
+}
+
+.navbar-burger span {
+  display: block;
+  height: 2px;
+  background: #cbd5e1;
+  border-radius: 2px;
+}
+
+.navbar-mobile-menu {
+  display: none;
+  flex-direction: column;
+  padding: 8px 12px 16px;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  border-top: 1px solid rgba(56,189,248,0.2);
+}
+
+.navbar-mobile-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  color: #cbd5e1;
+  font-weight: 500;
+  font-size: 15px;
+  transition: all 0.15s;
+}
+
+.navbar-mobile-link:hover,
+.navbar-mobile-link.active {
+  background: rgba(56, 189, 248, 0.15);
+  color: #fff;
+}
+
+.navbar-mobile-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 14px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #f97316, #ea580c);
+  color: white;
+  font-weight: 700;
+  font-size: 15px;
+  box-shadow: 0 4px 14px rgba(249,115,22,0.4);
+}
+
+/* Tablet: ocultar labels, solo iconos */
+@media (max-width: 1200px) {
+  .navbar-link-label { display: none; }
+  .navbar-link { padding: 9px 11px; }
+}
+
+/* Móvil: burger menu */
+@media (max-width: 900px) {
+  .navbar-inner {
+    padding: 0 12px;
+    height: 60px;
+    gap: 4px;
+  }
+  .navbar-logo {
+    margin-right: 0;
+    padding: 4px 6px;
+  }
+  .navbar-logo-icon { width: 34px; height: 34px; }
+  .navbar-logo-title { font-size: 15px; }
+  .navbar-logo-sub { display: none; }
+
+  .navbar-links { display: none; }
+  .navbar-cta { display: none; }
+  .navbar-burger { display: flex; }
+
+  .navbar-mobile-menu { display: flex; }
+}
+
+
+
+/* ============================================
+   DASHBOARD GRID - CARD METRICAS EN FILA
+   ============================================ */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+  width: 100%;
+}
+
+/* Tablet: 2 columnas */
+@media (max-width: 1100px) {
+  .dashboard-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Móvil: 1 columna */
+@media (max-width: 600px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
 }

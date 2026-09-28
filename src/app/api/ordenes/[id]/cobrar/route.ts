@@ -23,8 +23,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     if (errO) throw errO;
     if (!orden) throw new ApiError(404, "Orden no encontrada");
 
-    if (data.monto > orden.saldo) {
-      throw new ApiError(400, "El monto excede el saldo pendiente: " + orden.saldo);
+    if (data.monto > Number(orden.saldo)) {
+      throw new ApiError(400, "El monto excede el saldo pendiente");
     }
 
     const { data: pagoId, error } = await supabase.rpc("registrar_pago", {

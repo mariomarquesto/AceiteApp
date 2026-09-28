@@ -7,10 +7,16 @@ export async function GET(req: NextRequest) {
   try {
     const cliente_id = req.nextUrl.searchParams.get("cliente_id");
     const placa = req.nextUrl.searchParams.get("placa");
+    const tipo_uso = req.nextUrl.searchParams.get("tipo_uso");
 
-    let query = supabase.from("vehiculos").select("*").eq("activo", true);
+    let query = supabase
+      .from("vehiculos")
+      .select("*, cliente:clientes(id, nombre, telefono)")
+      .eq("activo", true);
+
     if (cliente_id) query = query.eq("cliente_id", cliente_id);
     if (placa) query = query.ilike("placa", "%" + placa + "%");
+    if (tipo_uso) query = query.eq("tipo_uso", tipo_uso);
 
     const { data, error } = await query.order("created_at", { ascending: false });
     if (error) throw error;

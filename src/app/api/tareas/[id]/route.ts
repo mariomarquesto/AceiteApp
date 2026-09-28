@@ -5,8 +5,8 @@ import { handleApiError, ok } from "@/lib/errors";
 export async function GET(_: NextRequest, { params }: { params: { id: string } }) {
   try {
     const { data, error } = await supabase
-      .from("ordenes")
-      .select("*, cliente:clientes(*), vehiculo:vehiculos(*), items:orden_items(*, producto:productos(*), servicio:servicios(*)), pagos(*)")
+      .from("tareas")
+      .select("*, cliente:clientes(*), vehiculo:vehiculos(*), orden:ordenes(*)")
       .eq("id", params.id)
       .single();
 
@@ -24,18 +24,18 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
     if (body.estado) {
       updates.estado = body.estado;
-      if (body.estado === "completado") {
-        updates.fecha_completado = new Date().toISOString();
-      }
-      if (body.estado === "entregado") {
-        updates.fecha_entrega = new Date().toISOString();
+      if (body.estado === "completada") {
+        updates.fecha_completada = new Date().toISOString();
       }
     }
-    if (body.notas !== undefined) updates.notas = body.notas;
-    if (body.km_ingreso !== undefined) updates.km_ingreso = body.km_ingreso;
+    if (body.resultado !== undefined) updates.resultado = body.resultado;
+    if (body.contacto_realizado !== undefined) updates.contacto_realizado = body.contacto_realizado;
+    if (body.medio_contacto !== undefined) updates.medio_contacto = body.medio_contacto;
+    if (body.fecha_vencimiento) updates.fecha_vencimiento = body.fecha_vencimiento;
+    if (body.prioridad) updates.prioridad = body.prioridad;
 
     const { data, error } = await supabase
-      .from("ordenes")
+      .from("tareas")
       .update(updates)
       .eq("id", params.id)
       .select()
@@ -43,20 +43,6 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
     if (error) throw error;
     return ok(data);
-  } catch (e) {
-    return handleApiError(e);
-  }
-}
-
-export async function DELETE(_: NextRequest, { params }: { params: { id: string } }) {
-  try {
-    const { error } = await supabase
-      .from("ordenes")
-      .update({ estado: "cancelado" })
-      .eq("id", params.id);
-
-    if (error) throw error;
-    return ok({ deleted: true });
   } catch (e) {
     return handleApiError(e);
   }

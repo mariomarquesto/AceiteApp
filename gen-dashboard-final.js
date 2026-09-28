@@ -1,4 +1,6 @@
-import Card from "./components/Card";
+﻿const fs = require("fs");
+
+const dashboard = `import Card from "./components/Card";
 import Link from "next/link";
 
 async function fetchJSON(path: string) {
@@ -296,3 +298,7 @@ export default async function Home() {
     </div>
   );
 }
+`;
+
+fs.writeFileSync("src/app/page.tsx", dashboard, "utf8");
+console.log("OK: dashboard con cards polenta + CRM integrado");

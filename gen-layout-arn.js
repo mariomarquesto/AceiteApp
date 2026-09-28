@@ -1,5 +1,6 @@
-// @ts-expect-error Next.js handles CSS side-effect imports at build time.
-import "./globals.css";
+﻿const fs = require("fs");
+
+const layout = `import "./globals.css";
 import type { Metadata } from "next";
 import Navbar from "./components/Navbar";
 
@@ -23,3 +24,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     </html>
   );
 }
+`;
+
+fs.writeFileSync("src/app/layout.tsx", layout, "utf8");
+console.log("OK: layout.tsx actualizado con branding ARN");

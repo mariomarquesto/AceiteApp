@@ -1,4 +1,6 @@
-"use client";
+﻿const fs = require("fs");
+
+const navbar = `"use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -100,3 +102,7 @@ export default function Navbar() {
     </nav>
   );
 }
+`;
+
+fs.writeFileSync("src/app/components/Navbar.tsx", navbar, "utf8");
+console.log("OK: Navbar con 8 items (Tareas, Vehiculos, Ordenes incluidos)");

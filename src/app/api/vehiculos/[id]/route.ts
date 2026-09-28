@@ -5,14 +5,21 @@ import { vehiculoSchema } from "@/utils/validators";
 
 export async function GET(_: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const { data, error } = await supabase
+    const { data: vehiculo, error } = await supabase
       .from("vehiculos")
       .select("*, cliente:clientes(*)")
       .eq("id", params.id)
       .single();
 
     if (error) throw error;
-    return ok(data);
+
+    const { data: ordenes } = await supabase
+      .from("ordenes")
+      .select("*, items:orden_items(*)")
+      .eq("vehiculo_id", params.id)
+      .order("fecha", { ascending: false });
+
+    return ok({ ...vehiculo, historial: ordenes || [] });
   } catch (e) {
     return handleApiError(e);
   }
