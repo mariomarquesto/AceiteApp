@@ -29,17 +29,24 @@ export async function GET(req: NextRequest) {
     const estado = req.nextUrl.searchParams.get("estado");
     const cliente_id = req.nextUrl.searchParams.get("cliente_id");
 
-    let query = supabase
+    console.log("[GET /api/ordenes] Params:", { estado, cliente_id });
+
+    const { data, error } = await supabase
       .from("ordenes")
-      .select("*, cliente:clientes(id, nombre, telefono), vehiculo:vehiculos(*), items:orden_items(*)");
+      .select("*")
+      .order("fecha", { ascending: false })
+      .limit(200);
 
-    if (estado) query = query.eq("estado", estado);
-    if (cliente_id) query = query.eq("cliente_id", cliente_id);
+    if (error) {
+      console.error("[GET /api/ordenes] ERROR SIMPLE:", JSON.stringify(error, null, 2));
+      throw error;
+    }
 
-    const { data, error } = await query.order("fecha", { ascending: false }).limit(200);
-    if (error) throw error;
+    console.log("[GET /api/ordenes] OK:", data?.length || 0, "registros");
     return ok(data);
-  } catch (e) {
+  } catch (e: any) {
+    console.error("[GET /api/ordenes] CATCH:", e?.message);
+    console.error("[GET /api/ordenes] STACK:", e?.stack);
     return handleApiError(e);
   }
 }
