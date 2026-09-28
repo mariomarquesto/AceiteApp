@@ -12,6 +12,41 @@ const links = [
   { href: "/cuenta-corriente", label: "Cuenta cte.", icon: "📊" }
 ];
 
+function LogoARN({ size = 42 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 120 120"
+      xmlns="http://www.w3.org/2000/svg"
+      style={{ flexShrink: 0 }}
+    >
+      {/* Escudo */}
+      <path
+        d="M 25 15 L 95 15 L 95 70 L 60 105 L 25 70 Z"
+        fill="#1e293b"
+        stroke="#38bdf8"
+        strokeWidth="2.5"
+        strokeLinejoin="round"
+      />
+      {/* Círculo naranja */}
+      <circle
+        cx="60"
+        cy="55"
+        r="22"
+        fill="none"
+        stroke="#f97316"
+        strokeWidth="4"
+      />
+      {/* Gota azul */}
+      <path
+        d="M 60 40 Q 50 52 50 60 Q 50 68 60 68 Q 70 68 70 60 Q 70 52 60 40 Z"
+        fill="#0ea5e9"
+      />
+    </svg>
+  );
+}
+
 export default function Navbar() {
   const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
@@ -31,16 +66,18 @@ export default function Navbar() {
     <nav className={"navbar" + (scrolled ? " navbar-scrolled" : "")}>
       <div className="navbar-inner">
         <Link href="/" className="navbar-logo">
-          <div className="navbar-logo-icon">🛢️</div>
+          <LogoARN size={42} />
           <div className="navbar-logo-text">
-            <div className="navbar-logo-title">Aceite App</div>
-            <div className="navbar-logo-sub">TALLER & REPUESTOS</div>
+            <div className="navbar-logo-title">ARN</div>
+            <div className="navbar-logo-sub">LUBRICENTRO Y REPUESTOS</div>
           </div>
         </Link>
 
         <div className="navbar-links">
           {links.map(l => {
-            const active = pathname === l.href || (l.href !== "/" && pathname.startsWith(l.href));
+            const active =
+              pathname === l.href ||
+              (l.href !== "/" && pathname.startsWith(l.href));
             return (
               <Link
                 key={l.href}
@@ -74,7 +111,9 @@ export default function Navbar() {
       {menuOpen && (
         <div className="navbar-mobile-menu">
           {links.map(l => {
-            const active = pathname === l.href || (l.href !== "/" && pathname.startsWith(l.href));
+            const active =
+              pathname === l.href ||
+              (l.href !== "/" && pathname.startsWith(l.href));
             return (
               <Link
                 key={l.href}
