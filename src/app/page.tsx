@@ -1,44 +1,62 @@
 import Card from "./components/Card";
 import Link from "next/link";
+import { supabase } from "@/lib/supabase";
 
-async function fetchJSON(path: string) {
-  try {
-    const base = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-    const res = await fetch(base + path, { cache: "no-store" });
-    if (!res.ok) return { data: [] };
-    return res.json();
-  } catch {
-    return { data: [] };
-  }
+async function getMetricas() {
+  const [
+    clientes,
+    productos,
+    stockBajo,
+    pagosHoy,
+    tareasResumen,
+    ordenesEnProceso
+  ] = await Promise.all([
+    supabase.from("clientes").select("id", { count: "exact", head: true }).eq("activo", true),
+    supabase.from("productos").select("id", { count: "exact", head: true }).eq("activo", true),
+    supabase.from("v_stock_bajo").select("*").limit(5),
+    supabase.from("pagos").select("monto, medio").gte("fecha", new Date().toISOString().slice(0, 10)),
+    supabase.from("tareas").select("estado, fecha_vencimiento, fecha_completada").eq("estado", "pendiente"),
+    supabase.from("ordenes").select("id", { count: "exact", head: true }).eq("estado", "en_proceso")
+  ]);
+
+  const hoy = new Date().toISOString().slice(0, 10);
+  const en7dias = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
+
+  const tareasPendientes = tareasResumen.data || [];
+  const vencidas = tareasPendientes.filter(t => t.fecha_vencimiento < hoy).length;
+  const hoyTareas = tareasPendientes.filter(t => t.fecha_vencimiento === hoy).length;
+  const proximos7 = tareasPendientes.filter(t => t.fecha_vencimiento > hoy && t.fecha_vencimiento <= en7dias).length;
+
+  const cobradoHoy = (pagosHoy.data || []).reduce((s, p) => s + Number(p.monto), 0);
+
+  return {
+    totalClientes: clientes.count || 0,
+    totalProductos: productos.count || 0,
+    productosBajos: stockBajo.data || [],
+    cobradoHoy,
+    tareas: {
+      vencidas,
+      hoy: hoyTareas,
+      proximos_7_dias: proximos7,
+      completadas_hoy: 0
+    },
+    ordenesEnProceso: ordenesEnProceso.count || 0
+  };
 }
 
 export default async function Home() {
-  const [clientes, productos, stockBajo, cierre, tareasResumen, ordenes] = await Promise.all([
-    fetchJSON("/api/clientes"),
-    fetchJSON("/api/productos"),
-    fetchJSON("/api/reportes/stock-bajo"),
-    fetchJSON("/api/reportes/cierre-caja"),
-    fetchJSON("/api/tareas/resumen"),
-    fetchJSON("/api/ordenes?estado=en_proceso")
-  ]);
-
-  const totalClientes = (clientes.data || []).length;
-  const totalProductos = (productos.data || []).length;
-  const productosBajos = stockBajo.data || [];
-  const cobradoHoy = cierre.data?.total_cobrado || 0;
-  const tareas = tareasResumen.data || { vencidas: 0, hoy: 0, proximos_7_dias: 0, completadas_hoy: 0 };
-  const ordenesEnProceso = (ordenes.data || []).length;
-  const totalTareasPendientes = tareas.vencidas + tareas.hoy + tareas.proximos_7_dias;
+  const m = await getMetricas();
+  const totalTareasPendientes = m.tareas.vencidas + m.tareas.hoy + m.tareas.proximos_7_dias;
 
   const accesos = [
     {
       href: "/tareas",
       icon: "📋",
       title: "Tareas del día",
-      subtitle: tareas.vencidas > 0
-        ? tareas.vencidas + " vencidas"
-        : tareas.hoy > 0
-          ? tareas.hoy + " para hoy"
+      subtitle: m.tareas.vencidas > 0
+        ? m.tareas.vencidas + " vencidas"
+        : m.tareas.hoy > 0
+          ? m.tareas.hoy + " para hoy"
           : "Sin pendientes",
       gradient: "linear-gradient(135deg, #f97316, #dc2626)"
     },
@@ -74,8 +92,7 @@ export default async function Home() {
         </div>
       </div>
 
-      {/* Alerta de tareas vencidas */}
-      {tareas.vencidas > 0 && (
+      {m.tareas.vencidas > 0 && (
         <Link href="/tareas" style={{ textDecoration: "none" }}>
           <div style={{
             background: "linear-gradient(135deg, #fef2f2, #fee2e2)",
@@ -87,13 +104,12 @@ export default async function Home() {
             alignItems: "center",
             gap: 16,
             cursor: "pointer",
-            boxShadow: "0 4px 16px rgba(239,68,68,0.2)",
-            transition: "all 0.2s"
+            boxShadow: "0 4px 16px rgba(239,68,68,0.2)"
           }}>
             <div style={{ fontSize: 36 }}>🔴</div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 800, color: "#991b1b", fontSize: 17, letterSpacing: -0.3 }}>
-                {tareas.vencidas} {tareas.vencidas === 1 ? "tarea vencida" : "tareas vencidas"}
+              <div style={{ fontWeight: 800, color: "#991b1b", fontSize: 17 }}>
+                {m.tareas.vencidas} {m.tareas.vencidas === 1 ? "tarea vencida" : "tareas vencidas"}
               </div>
               <div style={{ fontSize: 13, color: "#b91c1c", marginTop: 2 }}>
                 Contactá a esos clientes para recuperar ventas
@@ -104,50 +120,18 @@ export default async function Home() {
         </Link>
       )}
 
-      {/* Métricas */}
       <div className="dashboard-grid" style={{ marginBottom: 32 }}>
-        <Card
-          title="Clientes"
-          value={totalClientes}
-          icon="👥"
-          color="#0ea5e9"
-          subtitle="Registrados"
-        />
-        <Card
-          title="Órdenes activas"
-          value={ordenesEnProceso}
-          icon="🔧"
-          color="#8b5cf6"
-          subtitle="En proceso"
-        />
-        <Card
-          title="Cobrado hoy"
-          value={"$" + Number(cobradoHoy).toLocaleString("es-AR")}
-          icon="💰"
-          color="#10b981"
-          subtitle="Efectivo + transferencia"
-        />
-        <Card
-          title="Tareas pendientes"
-          value={totalTareasPendientes}
-          icon="📋"
-          color={tareas.vencidas > 0 ? "#ef4444" : "#f59e0b"}
-          subtitle={tareas.vencidas > 0 ? tareas.vencidas + " vencidas" : "Al día"}
-        />
+        <Card title="Clientes" value={m.totalClientes} icon="👥" color="#0ea5e9" subtitle="Registrados" />
+        <Card title="Órdenes activas" value={m.ordenesEnProceso} icon="🔧" color="#8b5cf6" subtitle="En proceso" />
+        <Card title="Cobrado hoy" value={"$" + Number(m.cobradoHoy).toLocaleString("es-AR")} icon="💰" color="#10b981" subtitle="Efectivo + transferencia" />
+        <Card title="Tareas pendientes" value={totalTareasPendientes} icon="📋" color={m.tareas.vencidas > 0 ? "#ef4444" : "#f59e0b"} subtitle={m.tareas.vencidas > 0 ? m.tareas.vencidas + " vencidas" : "Al día"} />
       </div>
 
-      {/* Accesos rápidos */}
-      <h2 style={{
-        fontSize: 18,
-        fontWeight: 700,
-        color: "#0f172a",
-        marginBottom: 16,
-        letterSpacing: -0.3
-      }}>
+      <h2 style={{ fontSize: 18, fontWeight: 700, color: "#0f172a", marginBottom: 16, letterSpacing: -0.3 }}>
         ⚡ Accesos rápidos
       </h2>
 
-      <div className="dashboard-grid" style={{ marginBottom: 32 }}>
+      <div className="quick-grid" style={{ marginBottom: 32 }}>
         {accesos.map(a => (
           <Link key={a.href} href={a.href} className="quick-access">
             <div className="quick-access-icon" style={{ background: a.gradient }}>
@@ -162,129 +146,48 @@ export default async function Home() {
         ))}
       </div>
 
-      {/* 2 columnas: Tareas + Stock bajo */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }} className="dashboard-columns">
         <div className="form-card">
-          <div style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: 16
-          }}>
-            <h2 style={{ fontSize: 17, color: "#0f172a", fontWeight: 700 }}>
-              📅 Resumen de tareas
-            </h2>
-            <Link href="/tareas" style={{ fontSize: 13, color: "#0ea5e9", fontWeight: 600 }}>
-              Ver todas →
-            </Link>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+            <h2 style={{ fontSize: 17, color: "#0f172a", fontWeight: 700 }}>📅 Resumen de tareas</h2>
+            <Link href="/tareas" style={{ fontSize: 13, color: "#0ea5e9", fontWeight: 600 }}>Ver todas →</Link>
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            <div style={{
-              display: "flex",
-              justifyContent: "space-between",
-              padding: "12px 14px",
-              background: "#fef2f2",
-              borderRadius: 8,
-              borderLeft: "3px solid #ef4444"
-            }}>
-              <span style={{ fontSize: 14, color: "#991b1b", fontWeight: 500 }}>
-                🔴 Vencidas
-              </span>
-              <span style={{ fontWeight: 700, color: "#991b1b" }}>{tareas.vencidas}</span>
+            <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 14px", background: "#fef2f2", borderRadius: 8, borderLeft: "3px solid #ef4444" }}>
+              <span style={{ fontSize: 14, color: "#991b1b", fontWeight: 500 }}>🔴 Vencidas</span>
+              <span style={{ fontWeight: 700, color: "#991b1b" }}>{m.tareas.vencidas}</span>
             </div>
-
-            <div style={{
-              display: "flex",
-              justifyContent: "space-between",
-              padding: "12px 14px",
-              background: "#fef9c3",
-              borderRadius: 8,
-              borderLeft: "3px solid #eab308"
-            }}>
-              <span style={{ fontSize: 14, color: "#713f12", fontWeight: 500 }}>
-                🟡 Para hoy
-              </span>
-              <span style={{ fontWeight: 700, color: "#713f12" }}>{tareas.hoy}</span>
+            <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 14px", background: "#fef9c3", borderRadius: 8, borderLeft: "3px solid #eab308" }}>
+              <span style={{ fontSize: 14, color: "#713f12", fontWeight: 500 }}>🟡 Para hoy</span>
+              <span style={{ fontWeight: 700, color: "#713f12" }}>{m.tareas.hoy}</span>
             </div>
-
-            <div style={{
-              display: "flex",
-              justifyContent: "space-between",
-              padding: "12px 14px",
-              background: "#e0f2fe",
-              borderRadius: 8,
-              borderLeft: "3px solid #0ea5e9"
-            }}>
-              <span style={{ fontSize: 14, color: "#0c4a6e", fontWeight: 500 }}>
-                📅 Próximos 7 días
-              </span>
-              <span style={{ fontWeight: 700, color: "#0c4a6e" }}>{tareas.proximos_7_dias}</span>
-            </div>
-
-            <div style={{
-              display: "flex",
-              justifyContent: "space-between",
-              padding: "12px 14px",
-              background: "#dcfce7",
-              borderRadius: 8,
-              borderLeft: "3px solid #16a34a"
-            }}>
-              <span style={{ fontSize: 14, color: "#14532d", fontWeight: 500 }}>
-                ✅ Completadas hoy
-              </span>
-              <span style={{ fontWeight: 700, color: "#14532d" }}>{tareas.completadas_hoy}</span>
+            <div style={{ display: "flex", justifyContent: "space-between", padding: "12px 14px", background: "#e0f2fe", borderRadius: 8, borderLeft: "3px solid #0ea5e9" }}>
+              <span style={{ fontSize: 14, color: "#0c4a6e", fontWeight: 500 }}>📅 Próximos 7 días</span>
+              <span style={{ fontWeight: 700, color: "#0c4a6e" }}>{m.tareas.proximos_7_dias}</span>
             </div>
           </div>
         </div>
 
         <div className="form-card">
-          <div style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: 16
-          }}>
-            <h2 style={{ fontSize: 17, color: "#0f172a", fontWeight: 700 }}>
-              ⚠️ Stock bajo
-            </h2>
-            <Link href="/productos" style={{ fontSize: 13, color: "#0ea5e9", fontWeight: 600 }}>
-              Ver todos →
-            </Link>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+            <h2 style={{ fontSize: 17, color: "#0f172a", fontWeight: 700 }}>⚠️ Stock bajo</h2>
+            <Link href="/productos" style={{ fontSize: 13, color: "#0ea5e9", fontWeight: 600 }}>Ver todos →</Link>
           </div>
 
-          {productosBajos.length === 0 ? (
+          {m.productosBajos.length === 0 ? (
             <div style={{ textAlign: "center", padding: 24, color: "#94a3b8", fontSize: 14 }}>
               ✅ Todo el inventario está en orden
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {productosBajos.slice(0, 5).map((p: any) => (
-                <div key={p.id} style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  padding: "10px 12px",
-                  background: "#fef2f2",
-                  borderRadius: 8,
-                  borderLeft: "3px solid #ef4444"
-                }}>
+              {m.productosBajos.map((p: any) => (
+                <div key={p.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 12px", background: "#fef2f2", borderRadius: 8, borderLeft: "3px solid #ef4444" }}>
                   <div>
-                    <div style={{ fontWeight: 600, fontSize: 13, color: "#0f172a" }}>
-                      {p.nombre}
-                    </div>
-                    <div style={{ fontSize: 11, color: "#64748b" }}>
-                      Mínimo: {p.stock_minimo}
-                    </div>
+                    <div style={{ fontWeight: 600, fontSize: 13, color: "#0f172a" }}>{p.nombre}</div>
+                    <div style={{ fontSize: 11, color: "#64748b" }}>Mínimo: {p.stock_minimo}</div>
                   </div>
-                  <div style={{
-                    background: "#ef4444",
-                    color: "white",
-                    padding: "4px 10px",
-                    borderRadius: 20,
-                    fontSize: 12,
-                    fontWeight: 700
-                  }}>
+                  <div style={{ background: "#ef4444", color: "white", padding: "4px 10px", borderRadius: 20, fontSize: 12, fontWeight: 700 }}>
                     {p.stock}
                   </div>
                 </div>

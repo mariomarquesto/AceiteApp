@@ -1,0 +1,10 @@
+﻿const fs = require("fs");
+if (!fs.existsSync("public")) fs.mkdirSync("public", { recursive: true });
+
+const iconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+  <path d="M 25 15 L 95 15 L 95 70 L 60 105 L 25 70 Z" fill="#1e293b" stroke="#38bdf8" stroke-width="2.5" stroke-linejoin="round"/>
+  <circle cx="60" cy="55" r="22" fill="none" stroke="#f97316" stroke-width="4"/>
+  <path d="M 60 40 Q 50 52 50 60 Q 50 68 60 68 Q 70 68 70 60 Q 70 52 60 40 Z" fill="#0ea5e9"/>
+</svg>`;
+fs.writeFileSync("public/logo-icon.svg", iconSvg, "utf8");
+console.log("OK: public/logo-icon.svg creado");
