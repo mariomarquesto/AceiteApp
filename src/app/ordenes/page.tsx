@@ -1,5 +1,8 @@
 import Link from "next/link";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 async function fetchOrdenes() {
   const base = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
   const res = await fetch(base + "/api/ordenes", { cache: "no-store" });

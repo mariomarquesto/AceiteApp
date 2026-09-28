@@ -1,4 +1,17 @@
-import { NextRequest } from "next/server";
+﻿const fs = require("fs");
+const path = require("path");
+
+function w(file, content) {
+  const dir = path.dirname(file);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(file, content, "utf8");
+  console.log("OK:", file);
+}
+
+// ============================================
+// TAREAS - Eliminar (agregar al [id]/route.ts)
+// ============================================
+w("src/app/api/tareas/[id]/route.ts", `import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { handleApiError, ok } from "@/lib/errors";
 
@@ -64,3 +77,6 @@ export async function DELETE(_: NextRequest, { params }: { params: { id: string 
     return handleApiError(e);
   }
 }
+`);
+
+console.log("\\n✅ Endpoint DELETE de tareas creado");

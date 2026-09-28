@@ -1,4 +1,6 @@
-"use client";
+﻿const fs = require("fs");
+
+const content = `"use client";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -216,3 +218,7 @@ export default function TareasPage() {
     </div>
   );
 }
+`;
+
+fs.writeFileSync("src/app/tareas/page.tsx", content, "utf8");
+console.log("OK: src/app/tareas/page.tsx actualizado");

@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 async function getClientes() {
   const { data } = await supabase
     .from("clientes")
@@ -40,18 +43,19 @@ export default async function ClientesPage() {
                 <th>Teléfono</th>
                 <th>Email</th>
                 <th>Cuenta cte.</th>
+                <th style={{ textAlign: "right" }}>Acciones</th>
               </tr>
             </thead>
             <tbody>
               {clientes.map((c: any) => (
                 <tr key={c.id}>
                   <td style={{ fontWeight: 600, color: "#0f172a" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <Link href={"/clientes/" + c.id} style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none", color: "inherit" }}>
                       <div style={{ width: 32, height: 32, borderRadius: "50%", background: "linear-gradient(135deg, #0ea5e9, #8b5cf6)", color: "white", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 13 }}>
                         {c.nombre.charAt(0).toUpperCase()}
                       </div>
                       {c.nombre}
-                    </div>
+                    </Link>
                   </td>
                   <td style={{ color: "#64748b" }}>{c.telefono || "—"}</td>
                   <td style={{ color: "#64748b" }}>{c.email || "—"}</td>
@@ -61,6 +65,11 @@ export default async function ClientesPage() {
                     ) : (
                       <span style={{ color: "#cbd5e1" }}>—</span>
                     )}
+                  </td>
+                  <td style={{ textAlign: "right" }}>
+                    <Link href={"/clientes/" + c.id} className="btn btn-secondary" style={{ padding: "6px 12px", fontSize: 13 }}>
+                      ✏️ Editar
+                    </Link>
                   </td>
                 </tr>
               ))}

@@ -1,5 +1,8 @@
 import { supabase } from "@/lib/supabase";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 async function getSaldos() {
   const { data } = await supabase.from("v_saldos_clientes").select("*");
   return data || [];
