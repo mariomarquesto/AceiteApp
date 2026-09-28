@@ -997,23 +997,60 @@ html, body {
 /* ============================================
    DASHBOARD GRID - CARD METRICAS EN FILA
    ============================================ */
-.dashboard-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 18px;
-  width: 100%;
-}
+
 
 /* Tablet: 2 columnas */
 @media (max-width: 1100px) {
-  .dashboard-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
+  
 }
 
 /* Móvil: 1 columna */
 @media (max-width: 600px) {
+  
+}
+
+
+/* ============================================
+   DASHBOARD GRID - CARD METRICAS
+   ============================================ */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  width: 100%;
+}
+
+@media (max-width: 1100px) {
   .dashboard-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+}
+
+/* ============================================
+   QUICK GRID - ACCESOS RAPIDOS
+   ============================================ */
+.quick-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  width: 100%;
+}
+
+@media (max-width: 1100px) {
+  .quick-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .quick-grid {
     grid-template-columns: 1fr;
     gap: 12px;
   }
