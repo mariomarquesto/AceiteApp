@@ -7,14 +7,16 @@ import BusquedaGlobal from "./BusquedaGlobal";
 
 const links = [
   { href: "/", label: "Inicio", icon: "🏠" },
+  { href: "/reportes", label: "Reportes", icon: "📈" },
   { href: "/tareas", label: "Tareas", icon: "📋" },
   { href: "/clientes", label: "Clientes", icon: "👥" },
+  { href: "/clientes-vip", label: "VIP", icon: "🏆" },
   { href: "/vehiculos", label: "Vehículos", icon: "🚗" },
   { href: "/ordenes", label: "Órdenes", icon: "🔧" },
   { href: "/ventas", label: "Ventas", icon: "💰" },
   { href: "/productos", label: "Productos", icon: "📦" },
   { href: "/servicios", label: "Servicios", icon: "⚙️" },
-  { href: "/cuenta-corriente", label: "Cta. cte.", icon: "📊" }
+  { href: "/cuenta-corriente", label: "Cta. cte.", icon: "💳" }
 ];
 
 function LogoARN({ size = 42 }: { size?: number }) {

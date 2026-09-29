@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import ContactoBoton from "@/app/components/ContactoBoton";
 
 type Tarea = any;
 
@@ -127,6 +128,13 @@ export default function TareasPage() {
                   <button onClick={() => posponer(t, 7)} className="btn btn-secondary" style={{ padding: "6px 12px", fontSize: 13 }}>
                     ⏰ +7 días
                   </button>
+                  <ContactoBoton
+                    clienteId={t.cliente_id}
+                    vehiculoId={t.vehiculo_id}
+                    tareaId={t.id}
+                    clienteNombre={t.cliente?.nombre}
+                    motivo="Recordatorio cambio de aceite"
+                  />
                   {t.vehiculo_id && (
                     <Link href={"/vehiculos/" + t.vehiculo_id} className="btn btn-secondary" style={{ padding: "6px 12px", fontSize: 13 }}>
                       🚗 Ver vehículo
