@@ -38,7 +38,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       .from("ordenes")
       .update(updates)
       .eq("id", params.id)
-      .select()
+      .select("*, cliente:clientes(id, nombre, telefono), vehiculo:vehiculos(marca, modelo, placa)")
       .single();
 
     if (error) throw error;

@@ -19,6 +19,7 @@ export default function EditarCliente() {
   const [exito, setExito] = useState(false);
   const [ultimoContacto, setUltimoContacto] = useState<any>(null);
   const [totalContactos, setTotalContactos] = useState(0);
+  const [copiado, setCopiado] = useState(false);
 
   useEffect(() => {
     fetch("/api/clientes/" + id)
@@ -110,6 +111,15 @@ export default function EditarCliente() {
     window.open("https://wa.me/" + (tel.startsWith("54") ? tel : "54" + tel) + "?text=" + mensaje, "_blank");
   }
 
+  function copiarLinkPortal() {
+    if (!form?.portal_token) return;
+    const base = window.location.origin;
+    const link = base + "/portal/" + form.portal_token;
+    navigator.clipboard.writeText(link);
+    setCopiado(true);
+    setTimeout(() => setCopiado(false), 2000);
+  }
+
   if (cargando) return <div>Cargando...</div>;
   if (!form) return <div>Cliente no encontrado</div>;
 
@@ -140,34 +150,6 @@ export default function EditarCliente() {
           <Link href="/clientes" className="btn btn-secondary">
             ← Volver
           </Link>
-          {form.portal_token && (
-            <a
-              href={"/portal/" + form.portal_token}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn"
-              style={{
-                background: "linear-gradient(135deg, #0ea5e9, #8b5cf6)",
-                color: "white",
-                fontWeight: 700
-              }}
-            >
-              🔗 Ver portal
-            </a>
-          )}
-          {form.telefono && form.portal_token && (
-            <button
-              onClick={enviarPortalWhatsApp}
-              className="btn"
-              style={{
-                background: "linear-gradient(135deg, #25d366, #128c7e)",
-                color: "white",
-                fontWeight: 700
-              }}
-            >
-              📱 Enviar portal
-            </button>
-          )}
           <Link href={"/clientes/" + id + "/nuevo-vehiculo"} className="btn btn-primary">
             + Nuevo vehículo
           </Link>
@@ -186,6 +168,80 @@ export default function EditarCliente() {
       {exito && (
         <div style={{ background: "#dcfce7", color: "#166534", padding: 12, borderRadius: 8, marginBottom: 18, fontWeight: 500 }}>
           ✅ Cambios guardados correctamente
+        </div>
+      )}
+
+      {/* Card del portal del cliente */}
+      {form.portal_token && (
+        <div className="form-card" style={{ maxWidth: 640, marginBottom: 24, background: "linear-gradient(135deg, #f0f9ff, #e0f2fe)", border: "1px solid #7dd3fc" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
+            <h2 style={{ fontSize: 15, fontWeight: 700, color: "#0369a1" }}>🔗 Portal del cliente</h2>
+            <a
+              href={"/portal/" + form.portal_token}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-primary"
+              style={{ padding: "6px 12px", fontSize: 13 }}
+            >
+              👁️ Ver portal
+            </a>
+          </div>
+
+          <div style={{ fontSize: 13, color: "#0c4a6e", marginBottom: 10 }}>
+            Este es el link único para que <strong>{form.nombre}</strong> vea su historial, vehículos y saldo.
+          </div>
+
+          <div style={{
+            background: "white",
+            border: "1px solid #bae6fd",
+            borderRadius: 8,
+            padding: 12,
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            flexWrap: "wrap"
+          }}>
+            <input
+              type="text"
+              readOnly
+              value={typeof window !== "undefined" ? window.location.origin + "/portal/" + form.portal_token : ""}
+              onClick={(e) => (e.target as HTMLInputElement).select()}
+              style={{
+                flex: 1,
+                minWidth: 200,
+                padding: 8,
+                border: "1px solid #e2e8f0",
+                borderRadius: 6,
+                fontSize: 12,
+                fontFamily: "monospace",
+                background: "#f8fafc",
+                color: "#334155"
+              }}
+            />
+            <button
+              onClick={copiarLinkPortal}
+              className="btn btn-secondary"
+              style={{ padding: "8px 14px", fontSize: 13, fontWeight: 600 }}
+            >
+              {copiado ? "✅ Copiado" : "📋 Copiar link"}
+            </button>
+          </div>
+
+          {form.telefono && (
+            <button
+              onClick={enviarPortalWhatsApp}
+              className="btn"
+              style={{
+                marginTop: 12,
+                background: "linear-gradient(135deg, #25d366, #128c7e)",
+                color: "white",
+                fontWeight: 700,
+                width: "100%"
+              }}
+            >
+              📱 Enviar link por WhatsApp
+            </button>
+          )}
         </div>
       )}
 

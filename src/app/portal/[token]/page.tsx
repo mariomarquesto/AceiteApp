@@ -1,18 +1,62 @@
 import Link from "next/link";
+import { supabase } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 async function getPortalData(token: string) {
-  try {
-    const base = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-    const res = await fetch(base + "/api/portal/" + token, { cache: "no-store" });
-    if (!res.ok) return null;
-    const json = await res.json();
-    return json.data;
-  } catch {
-    return null;
-  }
+  // Buscar cliente por token
+  const { data: cliente, error: errC } = await supabase
+    .from("clientes")
+    .select("id, nombre, telefono, email")
+    .eq("portal_token", token)
+    .eq("portal_activo", true)
+    .single();
+
+  if (errC || !cliente) return null;
+
+  // Obtener datos en paralelo
+  const [vehiculos, ordenes, ventas, saldo, turnos] = await Promise.all([
+    supabase
+      .from("vehiculos")
+      .select("*")
+      .eq("cliente_id", cliente.id)
+      .eq("activo", true)
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("ordenes")
+      .select("*, vehiculo:vehiculos(marca, modelo, placa)")
+      .eq("cliente_id", cliente.id)
+      .order("fecha", { ascending: false })
+      .limit(20),
+    supabase
+      .from("ventas")
+      .select("*")
+      .eq("cliente_id", cliente.id)
+      .order("fecha", { ascending: false })
+      .limit(20),
+    supabase
+      .from("v_saldos_clientes")
+      .select("*")
+      .eq("cliente_id", cliente.id)
+      .maybeSingle(),
+    supabase
+      .from("turnos")
+      .select("*")
+      .eq("cliente_id", cliente.id)
+      .gte("fecha", new Date().toISOString().slice(0, 10))
+      .order("fecha")
+      .limit(5)
+  ]);
+
+  return {
+    cliente,
+    vehiculos: vehiculos.data || [],
+    ordenes: ordenes.data || [],
+    ventas: ventas.data || [],
+    saldo: saldo.data || { saldo: 0, total_deudas: 0, total_abonos: 0 },
+    turnos: turnos.data || []
+  };
 }
 
 export default async function PortalPage({ params }: { params: { token: string } }) {

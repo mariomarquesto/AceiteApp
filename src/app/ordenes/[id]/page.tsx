@@ -30,6 +30,9 @@ export default function DetalleOrden() {
   async function cambiarEstado(nuevoEstado: string) {
     setProcesando(true);
     setError("");
+
+    let ordenActualizada: any = null;
+
     try {
       const res = await fetch("/api/ordenes/" + id, {
         method: "PUT",
@@ -37,12 +40,54 @@ export default function DetalleOrden() {
         body: JSON.stringify({ estado: nuevoEstado })
       });
       if (!res.ok) throw new Error("Error al cambiar estado");
+
+      const json = await res.json();
+      ordenActualizada = json.data;
+
+      // Recargar la orden PRIMERO
       await cargar();
     } catch (e: any) {
       setError(e.message);
-    } finally {
       setProcesando(false);
+      return;
     }
+
+    setProcesando(false);
+
+    // WhatsApp se abre DESPUÉS de recargar
+    if (nuevoEstado === "entregado" && ordenActualizada?.cliente?.telefono) {
+      setTimeout(() => {
+        abrirWhatsAppOrdenLista(ordenActualizada);
+      }, 500);
+    }
+  }
+
+  function abrirWhatsAppOrdenLista(orden: any) {
+    const tel = (orden.cliente?.telefono || "").replace(/[^0-9]/g, "");
+    const saludo = orden.cliente?.nombre ? `Hola ${orden.cliente.nombre}!` : "Hola!";
+
+    const vehiculoInfo = orden.vehiculo
+      ? `${orden.vehiculo.marca || ""} ${orden.vehiculo.modelo || ""}`.trim()
+      : "tu vehículo";
+
+    let mensaje = `${saludo} 👋\n\n`;
+    mensaje += `Tu *${vehiculoInfo}* ya está listo para retirar en *ARN Lubricentro*. 🔧\n\n`;
+    mensaje += `📋 *Orden #${orden.numero}*\n`;
+    mensaje += `📅 Listo el ${new Date().toLocaleDateString("es-AR")}\n`;
+    mensaje += `💵 *Total: $${Number(orden.total).toLocaleString("es-AR")}*\n`;
+
+    if (Number(orden.saldo) > 0) {
+      mensaje += `⚠️ Saldo pendiente: $${Number(orden.saldo).toLocaleString("es-AR")}\n`;
+    } else {
+      mensaje += `✅ *PAGADO*\n`;
+    }
+
+    mensaje += `\n📍 Paraguay 4395\n`;
+    mensaje += `⏰ Lunes a viernes 9-18, sábados 9-13\n\n`;
+    mensaje += `¡Te esperamos! 🚗`;
+
+    const url = `https://wa.me/${tel.startsWith("54") ? tel : "54" + tel}?text=${encodeURIComponent(mensaje)}`;
+    window.open(url, "_blank");
   }
 
   async function cobrar() {
@@ -103,8 +148,17 @@ export default function DetalleOrden() {
             </button>
           )}
           {orden.estado === "completado" && (
-            <button onClick={() => cambiarEstado("entregado")} disabled={procesando} className="btn btn-primary">
-              🚗 Marcar entregado
+            <button
+              onClick={() => cambiarEstado("entregado")}
+              disabled={procesando}
+              className="btn"
+              style={{
+                background: "linear-gradient(135deg, #25d366, #128c7e)",
+                color: "white",
+                fontWeight: 700
+              }}
+            >
+              🚗 Marcar entregado + Avisar
             </button>
           )}
           {puedeCobrar && (
