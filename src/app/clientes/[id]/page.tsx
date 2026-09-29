@@ -91,6 +91,25 @@ export default function EditarCliente() {
     }
   }
 
+  function enviarPortalWhatsApp() {
+    if (!form?.telefono || !form?.portal_token) return;
+    const tel = form.telefono.replace(/[^0-9]/g, "");
+    const base = window.location.origin;
+    const link = base + "/portal/" + form.portal_token;
+    const mensaje = encodeURIComponent(
+      "Hola " + form.nombre + "! 👋\n\n" +
+      "Te paso el link de tu *portal de cliente* en ARN Lubricentro.\n\n" +
+      "Ahí podés ver:\n" +
+      "🚗 Tus vehículos y próximos cambios\n" +
+      "📋 Historial de services\n" +
+      "💰 Tu saldo\n" +
+      "📅 Próximos turnos\n\n" +
+      "🔗 " + link + "\n\n" +
+      "¡Cualquier cosa avisame!"
+    );
+    window.open("https://wa.me/" + (tel.startsWith("54") ? tel : "54" + tel) + "?text=" + mensaje, "_blank");
+  }
+
   if (cargando) return <div>Cargando...</div>;
   if (!form) return <div>Cliente no encontrado</div>;
 
@@ -117,10 +136,38 @@ export default function EditarCliente() {
           <h1 className="page-title">Editar cliente</h1>
           <div className="page-subtitle">{form.nombre}</div>
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <Link href="/clientes" className="btn btn-secondary">
             ← Volver
           </Link>
+          {form.portal_token && (
+            <a
+              href={"/portal/" + form.portal_token}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn"
+              style={{
+                background: "linear-gradient(135deg, #0ea5e9, #8b5cf6)",
+                color: "white",
+                fontWeight: 700
+              }}
+            >
+              🔗 Ver portal
+            </a>
+          )}
+          {form.telefono && form.portal_token && (
+            <button
+              onClick={enviarPortalWhatsApp}
+              className="btn"
+              style={{
+                background: "linear-gradient(135deg, #25d366, #128c7e)",
+                color: "white",
+                fontWeight: 700
+              }}
+            >
+              📱 Enviar portal
+            </button>
+          )}
           <Link href={"/clientes/" + id + "/nuevo-vehiculo"} className="btn btn-primary">
             + Nuevo vehículo
           </Link>
