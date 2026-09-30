@@ -1,14 +1,20 @@
+// @ts-expect-error CSS imports are handled by Next.js
 import "./globals.css";
 import type { Metadata, Viewport } from "next";
 import NavbarWrapper from "./components/NavbarWrapper";
 
 export const metadata: Metadata = {
   title: "ARN Lubricentro y Repuestos",
-  description: "Sistema de gestion para lubricentro y venta de repuestos",
+  description: "Sistema de gestión para lubricentro y venta de repuestos",
   manifest: "/manifest.json",
   icons: {
-    icon: "/logo-icon.svg",
-    apple: "/icon-192.svg"
+    icon: [
+      { url: "/favicon.png", sizes: "32x32", type: "image/png" },
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" }
+    ],
+    apple: [
+      { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }
+    ]
   }
 };
 

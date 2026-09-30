@@ -36,7 +36,6 @@ async function getMetricas() {
 
   const cobradoHoy = (pagosHoy.data || []).reduce((s, p) => s + Number(p.monto), 0);
 
-  // Calcular cumpleaños próximos (7 días)
   const proximosCumples = (cumplesRaw.data || [])
     .map((c: any) => {
       const cumple = new Date(c.fecha_nacimiento + "T00:00:00");
@@ -68,7 +67,10 @@ export default async function Home() {
   const m = await getMetricas();
   const totalTareasPendientes = m.tareas.vencidas + m.tareas.hoy + m.tareas.proximos_7_dias;
 
-  const accesos = [
+  // ============================================
+  // ACCIONES RÁPIDAS
+  // ============================================
+  const accesosAcciones = [
     {
       href: "/tareas",
       icon: "📋",
@@ -103,6 +105,82 @@ export default async function Home() {
     }
   ];
 
+  // ============================================
+  // SECCIONES (todas del mismo estilo)
+  // ============================================
+  const accesosSecciones = [
+    {
+      href: "/whatsapp",
+      icon: "💬",
+      title: "WhatsApp",
+      subtitle: "Conversaciones del bot",
+      gradient: "linear-gradient(135deg, #22c55e, #16a34a)"
+    },
+    {
+      href: "/promociones",
+      icon: "🎁",
+      title: "Promociones",
+      subtitle: "Ofertas activas",
+      gradient: "linear-gradient(135deg, #ec4899, #f43f5e)"
+    },
+    {
+      href: "/reportes",
+      icon: "📈",
+      title: "Reportes",
+      subtitle: "Métricas y proyecciones",
+      gradient: "linear-gradient(135deg, #0ea5e9, #3b82f6)"
+    },
+    {
+      href: "/clientes-vip",
+      icon: "🏆",
+      title: "Clientes VIP",
+      subtitle: "Top 10 por facturación",
+      gradient: "linear-gradient(135deg, #f59e0b, #eab308)"
+    },
+    {
+      href: "/puntos",
+      icon: "⭐",
+      title: "Puntos",
+      subtitle: "Programa de fidelidad",
+      gradient: "linear-gradient(135deg, #8b5cf6, #a855f7)"
+    },
+    {
+      href: "/cuenta-corriente",
+      icon: "💳",
+      title: "Cuenta corriente",
+      subtitle: "Saldos y cobros",
+      gradient: "linear-gradient(135deg, #06b6d4, #0ea5e9)"
+    },
+    {
+      href: "/vehiculos",
+      icon: "🚗",
+      title: "Vehículos",
+      subtitle: "Flota de clientes",
+      gradient: "linear-gradient(135deg, #64748b, #475569)"
+    },
+    {
+      href: "/productos",
+      icon: "📦",
+      title: "Productos",
+      subtitle: "Inventario y stock",
+      gradient: "linear-gradient(135deg, #f97316, #ea580c)"
+    },
+    {
+      href: "/servicios",
+      icon: "🔧",
+      title: "Servicios",
+      subtitle: "Mano de obra",
+      gradient: "linear-gradient(135deg, #0ea5e9, #06b6d4)"
+    },
+    {
+      href: "/configuracion",
+      icon: "🎛️",
+      title: "Configuración",
+      subtitle: "Descuentos y bot",
+      gradient: "linear-gradient(135deg, #475569, #1e293b)"
+    }
+  ];
+
   return (
     <div>
       <div className="page-header">
@@ -129,7 +207,7 @@ export default async function Home() {
           <div style={{ fontSize: 42 }}>🎂</div>
           <div style={{ flex: 1, minWidth: 200 }}>
             <div style={{ fontWeight: 800, color: "#78350f", fontSize: 17 }}>
-              {m.cumples.length} {m.cumples.length === 1 ? "cumpleaños" : "cumpleaños"} esta semana
+              {m.cumples.length} cumpleaños esta semana
             </div>
             <div style={{ fontSize: 13, color: "#92400e", marginTop: 4 }}>
               {m.cumples.slice(0, 3).map((c: any, i: number) => (
@@ -182,13 +260,33 @@ export default async function Home() {
         <Card title="Tareas pendientes" value={totalTareasPendientes} icon="📋" color={m.tareas.vencidas > 0 ? "#ef4444" : "#f59e0b"} subtitle={m.tareas.vencidas > 0 ? m.tareas.vencidas + " vencidas" : "Al día"} />
       </div>
 
-      {/* ACCESOS RÁPIDOS */}
+      {/* ACCIONES RÁPIDAS */}
       <h2 style={{ fontSize: 18, fontWeight: 700, color: "#0f172a", marginBottom: 16, letterSpacing: -0.3 }}>
-        ⚡ Accesos rápidos
+        ⚡ Acciones rápidas
       </h2>
 
       <div className="quick-grid" style={{ marginBottom: 32 }}>
-        {accesos.map(a => (
+        {accesosAcciones.map(a => (
+          <Link key={a.href} href={a.href} className="quick-access">
+            <div className="quick-access-icon" style={{ background: a.gradient }}>
+              {a.icon}
+            </div>
+            <div className="quick-access-content">
+              <div className="quick-access-title">{a.title}</div>
+              <div className="quick-access-subtitle">{a.subtitle}</div>
+            </div>
+            <div className="quick-access-arrow">→</div>
+          </Link>
+        ))}
+      </div>
+
+      {/* SECCIONES (mismo estilo que arriba) */}
+      <h2 style={{ fontSize: 18, fontWeight: 700, color: "#0f172a", marginBottom: 16, letterSpacing: -0.3 }}>
+        🗂️ Secciones
+      </h2>
+
+      <div className="quick-grid" style={{ marginBottom: 32 }}>
+        {accesosSecciones.map(a => (
           <Link key={a.href} href={a.href} className="quick-access">
             <div className="quick-access-icon" style={{ background: a.gradient }}>
               {a.icon}

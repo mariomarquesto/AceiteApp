@@ -16,16 +16,6 @@ const linksPrincipales = [
   { href: "/ventas", label: "Ventas", icon: "💰" }
 ];
 
-const linksMas = [
-  { href: "/reportes", label: "Reportes", icon: "📈" },
-  { href: "/puntos", label: "Puntos", icon: "🎁" },
-  { href: "/clientes-vip", label: "VIP", icon: "🏆" },
-  { href: "/vehiculos", label: "Vehículos", icon: "🚗" },
-  { href: "/productos", label: "Productos", icon: "📦" },
-  { href: "/servicios", label: "Servicios", icon: "⚙️" },
-  { href: "/cuenta-corriente", label: "Cta. cte.", icon: "💳" }
-];
-
 function LogoARN({ size = 42 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" style={{ flexShrink: 0 }}>
@@ -40,7 +30,6 @@ export default function Navbar() {
   const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [masOpen, setMasOpen] = useState(false);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 10);
@@ -50,10 +39,7 @@ export default function Navbar() {
 
   useEffect(() => {
     setMenuOpen(false);
-    setMasOpen(false);
   }, [pathname]);
-
-  const algunoDeMas = linksMas.some(l => pathname === l.href || (l.href !== "/" && pathname.startsWith(l.href)));
 
   return (
     <nav className={"navbar" + (scrolled ? " navbar-scrolled" : "")}>
@@ -76,34 +62,6 @@ export default function Navbar() {
               </Link>
             );
           })}
-
-          <button
-            type="button"
-            onClick={() => setMasOpen(!masOpen)}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 5,
-              padding: "8px 12px",
-              borderRadius: 8,
-              border: masOpen ? "1px solid rgba(56,189,248,0.4)" : "1px solid transparent",
-              background: masOpen
-                ? "linear-gradient(135deg, rgba(14,165,233,0.25), rgba(139,92,246,0.25))"
-                : "transparent",
-              color: "#ffffff",
-              fontFamily: "inherit",
-              fontSize: 13,
-              fontWeight: 500,
-              cursor: "pointer",
-              whiteSpace: "nowrap",
-              flexShrink: 0,
-              transition: "all 0.2s ease"
-            }}
-          >
-            <span style={{ fontSize: 14, color: "#ffffff" }}>⚙️</span>
-            <span style={{ color: "#ffffff" }} className="navbar-link-label">Más</span>
-            <span style={{ fontSize: 10, color: "#ffffff" }}>{masOpen ? "▲" : "▼"}</span>
-          </button>
         </div>
 
         <div className="navbar-search-wrapper">
@@ -129,40 +87,9 @@ export default function Navbar() {
         </button>
       </div>
 
-      {masOpen && (
-        <div className="navbar-submenu">
-          {linksMas.map(l => {
-            const active = pathname === l.href || (l.href !== "/" && pathname.startsWith(l.href));
-            return (
-              <Link
-                key={l.href}
-                href={l.href}
-                className={"navbar-submenu-link" + (active ? " navbar-submenu-link-active" : "")}
-                onClick={() => setMasOpen(false)}
-              >
-                <span style={{ fontSize: 16 }}>{l.icon}</span>
-                <span>{l.label}</span>
-              </Link>
-            );
-          })}
-        </div>
-      )}
-
       {menuOpen && (
         <div className="navbar-mobile-menu">
           {linksPrincipales.map(l => {
-            const active = pathname === l.href || (l.href !== "/" && pathname.startsWith(l.href));
-            return (
-              <Link key={l.href} href={l.href} className={"navbar-mobile-link" + (active ? " active" : "")}>
-                <span style={{ fontSize: 18 }}>{l.icon}</span>
-                <span>{l.label}</span>
-              </Link>
-            );
-          })}
-          <div style={{ padding: "12px 16px 4px", fontSize: 11, color: "#64748b", fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 }}>
-            Más opciones
-          </div>
-          {linksMas.map(l => {
             const active = pathname === l.href || (l.href !== "/" && pathname.startsWith(l.href));
             return (
               <Link key={l.href} href={l.href} className={"navbar-mobile-link" + (active ? " active" : "")}>
