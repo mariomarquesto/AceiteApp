@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
+import FirmaDigital from "@/app/components/FirmaDigital";
+import Ticket from "@/app/components/Ticket";
 
 export default function DetalleOrden() {
   const router = useRouter();
@@ -15,6 +17,7 @@ export default function DetalleOrden() {
   const [medio, setMedio] = useState<"efectivo" | "transferencia" | "otro">("efectivo");
   const [error, setError] = useState("");
   const [procesando, setProcesando] = useState(false);
+  const [firmaBase64, setFirmaBase64] = useState<string>("");
 
   async function cargar() {
     setCargando(true);
@@ -26,6 +29,36 @@ export default function DetalleOrden() {
   }
 
   useEffect(() => { cargar(); }, [id]);
+
+  // Cargar la firma como base64 cuando cambia la URL
+  useEffect(() => {
+    if (!orden?.firma_url) {
+      setFirmaBase64("");
+      return;
+    }
+
+    console.log("Cargando firma desde:", orden.firma_url);
+
+    fetch(orden.firma_url)
+      .then(r => {
+        console.log("Status:", r.status);
+        return r.blob();
+      })
+      .then(blob => {
+        console.log("Blob:", blob.size, blob.type);
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const result = reader.result as string;
+          console.log("Base64 cargado, largo:", result.length);
+          setFirmaBase64(result);
+        };
+        reader.readAsDataURL(blob);
+      })
+      .catch((e) => {
+        console.error("Error cargando firma:", e);
+        setFirmaBase64("");
+      });
+  }, [orden?.firma_url]);
 
   async function cambiarEstado(nuevoEstado: string) {
     setProcesando(true);
@@ -44,7 +77,6 @@ export default function DetalleOrden() {
       const json = await res.json();
       ordenActualizada = json.data;
 
-      // Recargar la orden PRIMERO
       await cargar();
     } catch (e: any) {
       setError(e.message);
@@ -54,7 +86,6 @@ export default function DetalleOrden() {
 
     setProcesando(false);
 
-    // WhatsApp se abre DESPUÉS de recargar
     if (nuevoEstado === "entregado" && ordenActualizada?.cliente?.telefono) {
       setTimeout(() => {
         abrirWhatsAppOrdenLista(ordenActualizada);
@@ -142,6 +173,9 @@ export default function DetalleOrden() {
           <button onClick={() => router.push("/ordenes")} className="btn btn-secondary">
             Volver
           </button>
+          <button onClick={() => setAccion(accion === "ticket" ? "" : "ticket")} className="btn btn-secondary">
+            🖨️ {accion === "ticket" ? "Ocultar" : "Ver"} ticket
+          </button>
           {orden.estado === "en_proceso" && (
             <button onClick={() => cambiarEstado("completado")} disabled={procesando} className="btn btn-primary">
               ✓ Marcar completado
@@ -161,6 +195,13 @@ export default function DetalleOrden() {
               🚗 Marcar entregado + Avisar
             </button>
           )}
+          {orden.estado !== "cancelado" && !orden.firma_url && (
+            <FirmaDigital
+              tipo="orden"
+              id={orden.id}
+              onGuardado={() => cargar()}
+            />
+          )}
           {puedeCobrar && (
             <button onClick={() => setAccion(accion === "cobrar" ? "" : "cobrar")} className="btn btn-primary">
               💰 Cobrar
@@ -172,6 +213,33 @@ export default function DetalleOrden() {
       {error && (
         <div style={{ background: "#fee2e2", color: "#991b1b", padding: 12, borderRadius: 8, marginBottom: 16 }}>
           ⚠️ {error}
+        </div>
+      )}
+
+      {accion === "ticket" && (
+        <div style={{
+          marginBottom: 24,
+          display: "flex",
+          justifyContent: "center",
+          padding: 20,
+          background: "#f8fafc",
+          borderRadius: 12
+        }}>
+          <Ticket
+            tipo="Orden"
+            numero={orden.numero}
+            fecha={orden.fecha}
+            cliente={orden.cliente}
+            vehiculo={orden.vehiculo}
+            items={orden.items || []}
+            subtotal={orden.subtotal}
+            descuento={orden.descuento}
+            total={orden.total}
+            pagado={Number(orden.total) - saldo}
+            saldo={saldo}
+            firmaBase64={firmaBase64}
+            firmaUrl={orden.firma_url}
+          />
         </div>
       )}
 
@@ -278,6 +346,30 @@ export default function DetalleOrden() {
                   Cancelar
                 </button>
               </div>
+            </div>
+          )}
+
+          {orden.firma_url && (
+            <div className="form-card" style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 12, color: "#64748b", marginBottom: 8 }}>
+                🖋️ FIRMA DEL CLIENTE
+              </div>
+              <img
+                src={orden.firma_url}
+                alt="Firma del cliente"
+                style={{
+                  width: "100%",
+                  maxWidth: 300,
+                  border: "1px solid #e2e8f0",
+                  borderRadius: 8,
+                  background: "white"
+                }}
+              />
+              {orden.firma_fecha && (
+                <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 6 }}>
+                  Firmado el {new Date(orden.firma_fecha).toLocaleString("es-AR")}
+                </div>
+              )}
             </div>
           )}
 
