@@ -11,7 +11,13 @@ export async function GET() {
       const d = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
       const inicio = d.toISOString().slice(0, 10);
       const fin = new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().slice(0, 10);
-      meses.push({ mes: inicio.slice(0, 7), inicio, fin, total: 0 });
+      meses.push({
+        mes: inicio.slice(0, 7),
+        inicio,
+        fin,
+        total: 0,
+        dias: new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()
+      });
     }
 
     const primerDia = meses[0].inicio;
@@ -38,7 +44,47 @@ export async function GET() {
     // Promedios
     const promedio = meses.reduce((s, m) => s + m.total, 0) / meses.length;
 
-    // Top productos
+    // === TENDENCIA (regresión lineal simple) ===
+    const n = meses.length;
+    const sumX = meses.reduce((s, _, i) => s + i, 0);
+    const sumY = meses.reduce((s, m) => s + m.total, 0);
+    const sumXY = meses.reduce((s, m, i) => s + i * m.total, 0);
+    const sumX2 = meses.reduce((s, _, i) => s + i * i, 0);
+
+    const pendiente = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+    const intercepto = (sumY - pendiente * sumX) / n;
+
+    // === PROYECCIONES ===
+
+    // 1. Proyección lineal (tendencia)
+    const proyeccionLineal = [1, 2, 3].map(i => ({
+      mes: `Mes ${i}`,
+      total: Math.max(0, pendiente * (n - 1 + i) + intercepto)
+    }));
+
+    // 2. Proyección por promedio de los últimos 3 meses
+    const ultimos3 = meses.slice(-3);
+    const promedio3 = ultimos3.reduce((s, m) => s + m.total, 0) / 3;
+    const proyeccionPromedio = [1, 2, 3].map(i => ({
+      mes: `Mes ${i}`,
+      total: promedio3
+    }));
+
+    // 3. Proyección con factor de crecimiento (basado en la tendencia)
+    const factorCrecimiento = mesAnterior > 0 ? (mesActual / mesAnterior) : 1;
+    const factorSuavizado = 1 + (factorCrecimiento - 1) * 0.5; // Suavizar
+    const proyeccionCrecimiento = [1, 2, 3].map(i => ({
+      mes: `Mes ${i}`,
+      total: mesActual * Math.pow(factorSuavizado, i)
+    }));
+
+    // === PROYECCIÓN DEL MES ACTUAL (a fin de mes) ===
+    const diaActual = hoy.getDate();
+    const diasDelMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0).getDate();
+    const proyeccionFinDeMes = diaActual > 0 ? (mesActual / diaActual) * diasDelMes : 0;
+    const faltaParaCerrar = proyeccionFinDeMes - mesActual;
+
+    // === TOP PRODUCTOS ===
     const { data: itemsVentas } = await supabase
       .from("venta_items")
       .select("cantidad, subtotal, producto:productos(nombre)");
@@ -70,7 +116,7 @@ export async function GET() {
       .sort((a, b) => b.total - a.total)
       .slice(0, 10);
 
-    // Top clientes
+    // === TOP CLIENTES ===
     const { data: clientesVentas } = await supabase
       .from("ventas")
       .select("total, cliente:clientes(nombre)")
@@ -105,7 +151,22 @@ export async function GET() {
         diferencia,
         porcentaje: Number(porcentaje.toFixed(2))
       },
-      promedio
+      promedio,
+      proyeccion: proyeccionLineal,
+      proyecciones: {
+        lineal: proyeccionLineal,
+        promedio: proyeccionPromedio,
+        crecimiento: proyeccionCrecimiento
+      },
+      tendencia: Number(pendiente.toFixed(2)),
+      factorCrecimiento: Number(factorSucrecimiento => 0),
+      finDeMes: {
+        diaActual,
+        diasDelMes,
+        proyeccion: proyeccionFinDeMes,
+        faltaParaCerrar,
+        porcentajeCompletado: diasDelMes > 0 ? (diaActual / diasDelMes) * 100 : 0
+      }
     });
   } catch (e) {
     return handleApiError(e);
