@@ -1,16 +1,20 @@
 -- ============================================================
 -- ARN LUBRICENTRO Y REPUESTOS
--- Script completo de base de datos
+-- SCHEMA COMPLETO v1.1 - 2026-09-30
 -- ============================================================
--- Este script crea TODAS las tablas, funciones, triggers,
--- vistas y datos de ejemplo del sistema.
+-- Este script crea TODO el sistema desde cero:
+--   - 24 tablas
+--   - Funciones RPC (crear_venta, crear_orden, registrar_pago)
+--   - Triggers (updated_at, tareas automáticas)
+--   - Vistas (v_saldos_clientes, v_stock_bajo)
+--   - Datos seed de ejemplo
 --
 -- Uso: Pegar en Supabase → SQL Editor → RUN
 -- ============================================================
 
 
 -- ============================================================
--- 1. LIMPIEZA (por si ya existe algo)
+-- 1. LIMPIEZA
 -- ============================================================
 DROP TRIGGER IF EXISTS trg_orden_completada_crea_tarea ON ordenes;
 DROP TRIGGER IF EXISTS trg_tareas_updated ON tareas;
@@ -18,6 +22,8 @@ DROP TRIGGER IF EXISTS trg_clientes_updated ON clientes;
 DROP TRIGGER IF EXISTS trg_vehiculos_updated ON vehiculos;
 DROP TRIGGER IF EXISTS trg_productos_updated ON productos;
 DROP TRIGGER IF EXISTS trg_presupuestos_updated ON presupuestos;
+DROP TRIGGER IF EXISTS trg_promociones_updated ON promociones;
+DROP TRIGGER IF EXISTS trg_turnos_updated ON turnos;
 
 DROP FUNCTION IF EXISTS generar_tarea_proximo_cambio() CASCADE;
 DROP FUNCTION IF EXISTS registrar_movimiento_stock(UUID, VARCHAR, INT, VARCHAR, UUID, VARCHAR) CASCADE;
@@ -43,6 +49,14 @@ DROP TABLE IF EXISTS servicios CASCADE;
 DROP TABLE IF EXISTS productos CASCADE;
 DROP TABLE IF EXISTS vehiculos CASCADE;
 DROP TABLE IF EXISTS clientes CASCADE;
+DROP TABLE IF EXISTS contactos CASCADE;
+DROP TABLE IF EXISTS turnos CASCADE;
+DROP TABLE IF EXISTS promociones CASCADE;
+DROP TABLE IF EXISTS configuracion CASCADE;
+DROP TABLE IF EXISTS configuracion_descuentos CASCADE;
+DROP TABLE IF EXISTS conversaciones CASCADE;
+DROP TABLE IF EXISTS whatsapp_conversaciones CASCADE;
+DROP TABLE IF EXISTS whatsapp_mensajes CASCADE;
 
 DROP VIEW IF EXISTS v_saldos_clientes CASCADE;
 DROP VIEW IF EXISTS v_stock_bajo CASCADE;
@@ -67,12 +81,16 @@ CREATE TABLE clientes (
   permite_cuenta_corriente BOOLEAN DEFAULT FALSE,
   limite_credito NUMERIC(12,2) DEFAULT 0,
   activo BOOLEAN DEFAULT TRUE,
+  portal_token VARCHAR(64) UNIQUE,
+  portal_activo BOOLEAN DEFAULT TRUE,
+  fecha_nacimiento DATE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE INDEX idx_clientes_telefono ON clientes(telefono);
 CREATE INDEX idx_clientes_nombre ON clientes(nombre);
+CREATE INDEX idx_clientes_portal_token ON clientes(portal_token);
 
 
 -- ============================================================
@@ -88,15 +106,12 @@ CREATE TABLE vehiculos (
   vin VARCHAR(30),
   color VARCHAR(30),
   km_actual INT DEFAULT 0,
-  
-  -- Datos para recordatorios automáticos
   tipo_uso VARCHAR(20) DEFAULT 'particular'
     CHECK (tipo_uso IN ('particular','taxi','uber','remis','flota','empresa','moto','otro')),
   intervalo_km INT DEFAULT 10000,
   intervalo_meses INT DEFAULT 6,
   proximo_cambio_km INT,
   proximo_cambio_fecha DATE,
-  
   notas TEXT,
   activo BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -180,6 +195,12 @@ CREATE TABLE presupuestos (
   descuento NUMERIC(12,2) DEFAULT 0,
   total NUMERIC(12,2) DEFAULT 0,
   notas TEXT,
+  token_publico VARCHAR(64) UNIQUE,
+  fecha_vencimiento DATE,
+  enviado_at TIMESTAMPTZ,
+  aceptado_at TIMESTAMPTZ,
+  rechazado_at TIMESTAMPTZ,
+  orden_id UUID,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -221,6 +242,11 @@ CREATE TABLE ordenes (
   total NUMERIC(12,2) DEFAULT 0,
   saldo NUMERIC(12,2) DEFAULT 0,
   notas TEXT,
+  fecha_vencimiento DATE,
+  recargo_mora NUMERIC(12,2) DEFAULT 0,
+  total_base NUMERIC(12,2),
+  firma_url TEXT,
+  firma_fecha TIMESTAMPTZ,
   fecha TIMESTAMPTZ DEFAULT NOW(),
   fecha_completado TIMESTAMPTZ,
   fecha_entrega TIMESTAMPTZ
@@ -245,6 +271,10 @@ CREATE TABLE orden_items (
 
 CREATE INDEX idx_orden_items_orden ON orden_items(orden_id);
 
+ALTER TABLE presupuestos
+  ADD CONSTRAINT presupuestos_orden_id_fkey
+  FOREIGN KEY (orden_id) REFERENCES ordenes(id);
+
 
 -- ============================================================
 -- 10. VENTAS DIRECTAS
@@ -260,6 +290,11 @@ CREATE TABLE ventas (
   total NUMERIC(12,2) DEFAULT 0,
   saldo NUMERIC(12,2) DEFAULT 0,
   notas TEXT,
+  fecha_vencimiento DATE,
+  recargo_mora NUMERIC(12,2) DEFAULT 0,
+  total_base NUMERIC(12,2),
+  firma_url TEXT,
+  firma_fecha TIMESTAMPTZ,
   fecha TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -304,7 +339,7 @@ CREATE INDEX idx_pagos_fecha ON pagos(fecha);
 
 
 -- ============================================================
--- 12. TAREAS (CRM de recordatorios)
+-- 12. TAREAS (CRM)
 -- ============================================================
 CREATE TABLE tareas (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -314,19 +349,15 @@ CREATE TABLE tareas (
   cliente_id UUID REFERENCES clientes(id),
   vehiculo_id UUID REFERENCES vehiculos(id),
   orden_id UUID REFERENCES ordenes(id),
-  
   estado VARCHAR(15) NOT NULL DEFAULT 'pendiente'
     CHECK (estado IN ('pendiente','en_progreso','completada','cancelada')),
   prioridad VARCHAR(10) DEFAULT 'media'
     CHECK (prioridad IN ('baja','media','alta','urgente')),
-  
   fecha_vencimiento DATE NOT NULL,
   fecha_completada TIMESTAMPTZ,
-  
   resultado TEXT,
   contacto_realizado BOOLEAN DEFAULT FALSE,
   medio_contacto VARCHAR(20),
-  
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -377,7 +408,167 @@ CREATE INDEX idx_tareas_historial_tarea ON tareas_historial(tarea_id);
 
 
 -- ============================================================
--- 15. TRIGGER updated_at
+-- 15. CONFIGURACION (MORA)
+-- ============================================================
+CREATE TABLE configuracion (
+  id INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+  dias_vencimiento INTEGER DEFAULT 30,
+  porcentaje_mora_mensual NUMERIC(5,2) DEFAULT 5.00,
+  activar_mora BOOLEAN DEFAULT TRUE,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+INSERT INTO configuracion (id) VALUES (1) ON CONFLICT (id) DO NOTHING;
+
+
+-- ============================================================
+-- 16. CONTACTOS (CRM)
+-- ============================================================
+CREATE TABLE contactos (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  cliente_id UUID NOT NULL REFERENCES clientes(id),
+  vehiculo_id UUID REFERENCES vehiculos(id),
+  tarea_id UUID REFERENCES tareas(id),
+  tipo VARCHAR(20) NOT NULL DEFAULT 'whatsapp'
+    CHECK (tipo IN ('whatsapp','llamada','email','visita','sms')),
+  motivo VARCHAR(200),
+  resultado VARCHAR(20) DEFAULT 'contactado'
+    CHECK (resultado IN ('sin_respuesta','contactado','interesado','agendo','rechazo')),
+  notas TEXT,
+  usuario VARCHAR(100),
+  fecha TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_contactos_cliente ON contactos(cliente_id);
+CREATE INDEX idx_contactos_fecha ON contactos(fecha);
+
+
+-- ============================================================
+-- 17. TURNOS (AGENDA)
+-- ============================================================
+CREATE TABLE turnos (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  cliente_id UUID NOT NULL REFERENCES clientes(id),
+  vehiculo_id UUID REFERENCES vehiculos(id),
+  fecha DATE NOT NULL,
+  hora TIME NOT NULL,
+  duracion_minutos INTEGER DEFAULT 60,
+  servicio VARCHAR(200),
+  notas TEXT,
+  estado VARCHAR(20) DEFAULT 'pendiente'
+    CHECK (estado IN ('pendiente','confirmado','completado','cancelado','no_asistio')),
+  orden_id UUID REFERENCES ordenes(id),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_turnos_fecha ON turnos(fecha);
+CREATE INDEX idx_turnos_cliente ON turnos(cliente_id);
+CREATE INDEX idx_turnos_estado ON turnos(estado);
+
+
+-- ============================================================
+-- 18. PROMOCIONES
+-- ============================================================
+CREATE TABLE promociones (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  titulo VARCHAR(150) NOT NULL,
+  descripcion TEXT,
+  descuento_porcentaje NUMERIC(5,2),
+  descuento_monto NUMERIC(12,2),
+  aplica_a VARCHAR(15) DEFAULT 'todo'
+    CHECK (aplica_a IN ('servicio','producto','combo','todo')),
+  producto_id UUID REFERENCES productos(id) ON DELETE SET NULL,
+  servicio_id UUID REFERENCES servicios(id) ON DELETE SET NULL,
+  requiere_producto_id UUID REFERENCES productos(id) ON DELETE SET NULL,
+  fecha_inicio DATE NOT NULL DEFAULT CURRENT_DATE,
+  fecha_fin DATE NOT NULL,
+  activa BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  CHECK (descuento_porcentaje IS NOT NULL OR descuento_monto IS NOT NULL),
+  CHECK (fecha_fin >= fecha_inicio)
+);
+
+CREATE INDEX idx_promociones_activa ON promociones(activa);
+CREATE INDEX idx_promociones_vigencia ON promociones(fecha_inicio, fecha_fin);
+
+
+-- ============================================================
+-- 19. CONFIGURACION_DESCUENTOS
+-- ============================================================
+CREATE TABLE configuracion_descuentos (
+  id INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+  descuento_efectivo NUMERIC(5,2) DEFAULT 10.00,
+  descuento_transferencia NUMERIC(5,2) DEFAULT 5.00,
+  descuento_cumpleanos NUMERIC(5,2) DEFAULT 15.00,
+  descuento_recurrente NUMERIC(5,2) DEFAULT 10.00,
+  servicios_para_recurrente INTEGER DEFAULT 5,
+  mensaje_bienvenida TEXT DEFAULT 'Hola! 👋 Bienvenido a ARN Lubricentro. ¿En qué te puedo ayudar?',
+  mensaje_despedida TEXT DEFAULT '¡Gracias por escribirnos! Cualquier cosa estamos a disposición 🚗',
+  bot_activo BOOLEAN DEFAULT TRUE,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+INSERT INTO configuracion_descuentos (id) VALUES (1) ON CONFLICT (id) DO NOTHING;
+
+
+-- ============================================================
+-- 20. CONVERSACIONES (legacy)
+-- ============================================================
+CREATE TABLE conversaciones (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  telefono VARCHAR(30) NOT NULL,
+  cliente_id UUID REFERENCES clientes(id),
+  mensaje TEXT NOT NULL,
+  respuesta TEXT,
+  direccion VARCHAR(10) CHECK (direccion IN ('entrante','saliente')),
+  es_ia BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_conversaciones_telefono ON conversaciones(telefono);
+
+
+-- ============================================================
+-- 21. WHATSAPP_CONVERSACIONES
+-- ============================================================
+CREATE TABLE whatsapp_conversaciones (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  telefono VARCHAR(30) NOT NULL UNIQUE,
+  cliente_id UUID REFERENCES clientes(id) ON DELETE SET NULL,
+  ultimo_mensaje TEXT,
+  ultima_actividad TIMESTAMPTZ DEFAULT NOW(),
+  no_leidos INTEGER DEFAULT 0,
+  bot_activo BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_wa_conv_telefono ON whatsapp_conversaciones(telefono);
+CREATE INDEX idx_wa_conv_actividad ON whatsapp_conversaciones(ultima_actividad DESC);
+
+
+-- ============================================================
+-- 22. WHATSAPP_MENSAJES
+-- ============================================================
+CREATE TABLE whatsapp_mensajes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  conversacion_id UUID REFERENCES whatsapp_conversaciones(id) ON DELETE CASCADE,
+  telefono VARCHAR(30) NOT NULL,
+  direccion VARCHAR(10) NOT NULL CHECK (direccion IN ('entrante','saliente')),
+  contenido TEXT,
+  tipo VARCHAR(20) DEFAULT 'text',
+  message_id VARCHAR(100),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_wa_msg_conv ON whatsapp_mensajes(conversacion_id);
+CREATE INDEX idx_wa_msg_telefono ON whatsapp_mensajes(telefono);
+CREATE INDEX idx_wa_msg_fecha ON whatsapp_mensajes(created_at DESC);
+
+
+-- ============================================================
+-- 23. TRIGGER updated_at
 -- ============================================================
 CREATE OR REPLACE FUNCTION set_updated_at()
 RETURNS TRIGGER AS $$
@@ -397,10 +588,14 @@ CREATE TRIGGER trg_presupuestos_updated BEFORE UPDATE ON presupuestos
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 CREATE TRIGGER trg_tareas_updated BEFORE UPDATE ON tareas
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+CREATE TRIGGER trg_promociones_updated BEFORE UPDATE ON promociones
+  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+CREATE TRIGGER trg_turnos_updated BEFORE UPDATE ON turnos
+  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
 
 -- ============================================================
--- 16. FUNCION: registrar_movimiento_stock
+-- 24. FUNCION: registrar_movimiento_stock
 -- ============================================================
 CREATE OR REPLACE FUNCTION registrar_movimiento_stock(
   p_producto_id UUID,
@@ -437,7 +632,7 @@ $$ LANGUAGE plpgsql;
 
 
 -- ============================================================
--- 17. FUNCION: recalcular_estado_venta
+-- 25. FUNCION: recalcular_estado_venta
 -- ============================================================
 CREATE OR REPLACE FUNCTION recalcular_estado_venta(p_venta_id UUID)
 RETURNS VOID AS $$
@@ -462,7 +657,7 @@ $$ LANGUAGE plpgsql;
 
 
 -- ============================================================
--- 18. FUNCION: recalcular_estado_orden
+-- 26. FUNCION: recalcular_estado_orden
 -- ============================================================
 CREATE OR REPLACE FUNCTION recalcular_estado_orden(p_orden_id UUID)
 RETURNS VOID AS $$
@@ -487,7 +682,7 @@ $$ LANGUAGE plpgsql;
 
 
 -- ============================================================
--- 19. FUNCION: crear_venta
+-- 27. FUNCION: crear_venta
 -- ============================================================
 CREATE OR REPLACE FUNCTION crear_venta(
   p_cliente_id UUID,
@@ -542,7 +737,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 
 -- ============================================================
--- 20. FUNCION: crear_orden
+-- 28. FUNCION: crear_orden
 -- ============================================================
 CREATE OR REPLACE FUNCTION crear_orden(
   p_cliente_id UUID,
@@ -604,7 +799,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 
 -- ============================================================
--- 21. FUNCION: registrar_pago
+-- 29. FUNCION: registrar_pago
 -- ============================================================
 CREATE OR REPLACE FUNCTION registrar_pago(
   p_cliente_id UUID,
@@ -677,7 +872,7 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 
 -- ============================================================
--- 22. FUNCION: generar_tarea_proximo_cambio (trigger)
+-- 30. FUNCION: generar_tarea_proximo_cambio (trigger)
 -- ============================================================
 CREATE OR REPLACE FUNCTION generar_tarea_proximo_cambio()
 RETURNS TRIGGER AS $$
@@ -754,7 +949,7 @@ CREATE TRIGGER trg_orden_completada_crea_tarea
 
 
 -- ============================================================
--- 23. VISTAS
+-- 31. VISTAS
 -- ============================================================
 CREATE OR REPLACE VIEW v_saldos_clientes AS
 SELECT
@@ -784,7 +979,7 @@ SELECT * FROM productos WHERE activo = TRUE AND stock <= stock_minimo;
 
 
 -- ============================================================
--- 24. DESHABILITAR RLS (para desarrollo)
+-- 32. DESHABILITAR RLS (desarrollo)
 -- ============================================================
 ALTER TABLE clientes DISABLE ROW LEVEL SECURITY;
 ALTER TABLE vehiculos DISABLE ROW LEVEL SECURITY;
@@ -801,19 +996,27 @@ ALTER TABLE pagos DISABLE ROW LEVEL SECURITY;
 ALTER TABLE tareas DISABLE ROW LEVEL SECURITY;
 ALTER TABLE plantillas_recordatorio DISABLE ROW LEVEL SECURITY;
 ALTER TABLE tareas_historial DISABLE ROW LEVEL SECURITY;
+ALTER TABLE contactos DISABLE ROW LEVEL SECURITY;
+ALTER TABLE turnos DISABLE ROW LEVEL SECURITY;
+ALTER TABLE promociones DISABLE ROW LEVEL SECURITY;
+ALTER TABLE configuracion DISABLE ROW LEVEL SECURITY;
+ALTER TABLE configuracion_descuentos DISABLE ROW LEVEL SECURITY;
+ALTER TABLE conversaciones DISABLE ROW LEVEL SECURITY;
+ALTER TABLE whatsapp_conversaciones DISABLE ROW LEVEL SECURITY;
+ALTER TABLE whatsapp_mensajes DISABLE ROW LEVEL SECURITY;
 
 
 -- ============================================================
--- 25. DATOS SEED (ejemplos)
+-- 33. DATOS SEED
 -- ============================================================
 
 -- Servicios típicos
 INSERT INTO servicios (nombre, precio) VALUES
-  ('Cambio de aceite + filtro', 5000),
-  ('Cambio de filtro de aire', 1500),
-  ('Cambio de filtro de combustible', 2000),
-  ('Cambio de filtro de cabina', 1800),
-  ('Revision general', 3000);
+  ('Cambio de aceite + filtro', 25000),
+  ('Cambio de filtro de aire', 8000),
+  ('Cambio de filtro de combustible', 12000),
+  ('Cambio de filtro de cabina', 10000),
+  ('Revisión general', 5000);
 
 -- Productos típicos
 INSERT INTO productos (codigo, nombre, tipo, marca, medida, precio_costo, precio_venta, stock, stock_minimo) VALUES
@@ -827,20 +1030,9 @@ INSERT INTO productos (codigo, nombre, tipo, marca, medida, precio_costo, precio
   ('BAT-12V-50', 'Bateria 12V 50Ah', 'repuesto', 'Willard', '12V', 45000, 65000, 5, 1),
   ('BOM-ACE-001', 'Bomba de aceite', 'repuesto', 'Generica', NULL, 8000, 14000, 3, 1);
 
--- Clientes de ejemplo
-INSERT INTO clientes (nombre, telefono, email, direccion, permite_cuenta_corriente, limite_credito) VALUES
-  ('Juan Perez', '11-5555-1234', 'juan.perez@email.com', 'Av. Corrientes 1234, CABA', true, 50000),
-  ('Maria Gonzalez', '11-4444-5678', 'maria.g@email.com', 'Av. Rivadavia 5678, CABA', false, 0),
-  ('Carlos Rodriguez', '11-6666-7890', 'carlos.r@email.com', 'Belgrano 234, San Isidro', true, 30000),
-  ('Ana Martinez', '11-2222-3333', NULL, 'Mitre 890, Vicente Lopez', false, 0),
-  ('Roberto Silva', '11-7777-8888', 'rsilva@email.com', 'San Martin 456, Tigre', true, 100000),
-  ('Laura Fernandez', '11-9999-0000', 'laura.f@email.com', NULL, false, 0),
-  ('Diego Lopez', '11-1111-2222', NULL, 'Rivadavia 789, Moron', true, 25000),
-  ('Patricia Sosa', '11-3333-4444', 'patricia.sosa@email.com', 'Alsina 123, Quilmes', false, 0);
-
 
 -- ============================================================
--- 26. VERIFICACION FINAL
+-- 34. VERIFICACION FINAL
 -- ============================================================
 SELECT 'clientes' as tabla, COUNT(*)::int as total FROM clientes
 UNION ALL SELECT 'vehiculos', COUNT(*)::int FROM vehiculos
@@ -852,4 +1044,9 @@ UNION ALL SELECT 'ventas', COUNT(*)::int FROM ventas
 UNION ALL SELECT 'pagos', COUNT(*)::int FROM pagos
 UNION ALL SELECT 'tareas', COUNT(*)::int FROM tareas
 UNION ALL SELECT 'plantillas_recordatorio', COUNT(*)::int FROM plantillas_recordatorio
+UNION ALL SELECT 'contactos', COUNT(*)::int FROM contactos
+UNION ALL SELECT 'turnos', COUNT(*)::int FROM turnos
+UNION ALL SELECT 'promociones', COUNT(*)::int FROM promociones
+UNION ALL SELECT 'whatsapp_conversaciones', COUNT(*)::int FROM whatsapp_conversaciones
+UNION ALL SELECT 'whatsapp_mensajes', COUNT(*)::int FROM whatsapp_mensajes
 ORDER BY tabla;

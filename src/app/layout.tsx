@@ -1,7 +1,7 @@
-// @ts-expect-error CSS imports are handled by Next.js
 import "./globals.css";
 import type { Metadata, Viewport } from "next";
 import NavbarWrapper from "./components/NavbarWrapper";
+import Script from "next/script";
 
 export const metadata: Metadata = {
   title: "ARN Lubricentro y Repuestos",
@@ -32,6 +32,23 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <main className="main-container">
           {children}
         </main>
+
+        <Script id="sw-register" strategy="afterInteractive">
+          {`
+            if ('serviceWorker' in navigator) {
+              window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/sw.js').then(
+                  function(registration) {
+                    console.log('✅ Service Worker registrado:', registration.scope);
+                  },
+                  function(err) {
+                    console.log('❌ Error al registrar SW:', err);
+                  }
+                );
+              });
+            }
+          `}
+        </Script>
       </body>
     </html>
   );
