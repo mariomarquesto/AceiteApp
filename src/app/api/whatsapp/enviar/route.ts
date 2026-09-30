@@ -2,6 +2,9 @@ import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { handleApiError, ok } from "@/lib/errors";
 
+// 🚫 WhatsApp desactivado temporalmente hasta configurar Meta
+const WHATSAPP_HABILITADO = false;
+
 export async function POST(req: NextRequest) {
   try {
     const { telefono, mensaje } = await req.json();
@@ -10,11 +13,22 @@ export async function POST(req: NextRequest) {
       return ok({ enviado: false, motivo: "Faltan datos" });
     }
 
+    // 🚫 Si WhatsApp no está configurado, devolvemos OK pero no enviamos
+    if (!WHATSAPP_HABILITADO) {
+      return ok({
+        enviado: false,
+        motivo: "WhatsApp no configurado. Activá WHATSAPP_HABILITADO cuando tengas las credenciales de Meta."
+      });
+    }
+
     const phoneId = process.env.WHATSAPP_PHONE_ID;
     const token = process.env.WHATSAPP_TOKEN;
 
     if (!phoneId || !token) {
-      throw new Error("Faltan credenciales de WhatsApp en .env.local");
+      return ok({
+        enviado: false,
+        motivo: "Faltan credenciales de WhatsApp en variables de entorno"
+      });
     }
 
     // Enviar por Meta Cloud API
@@ -55,7 +69,6 @@ export async function POST(req: NextRequest) {
       conversacion_id: conv?.id || null
     });
 
-    // Actualizar último mensaje
     if (conv) {
       await supabase
         .from("whatsapp_conversaciones")

@@ -2,7 +2,6 @@ import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { handleApiError, ok } from "@/lib/errors";
 
-// Valores por defecto si la fila no existe
 const DEFAULTS = {
   id: 1,
   descuento_efectivo: 0,
@@ -24,7 +23,6 @@ export async function GET() {
       .maybeSingle();
 
     if (error) throw error;
-
     return ok(data || DEFAULTS);
   } catch (e) {
     return handleApiError(e);

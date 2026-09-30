@@ -2,6 +2,10 @@ import { NextRequest } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { handleApiError, ok } from "@/lib/errors";
 
+// 🚫 WhatsApp/IA desactivado temporalmente hasta configurar Meta
+// Cuando tengas las credenciales, cambiá esto a true
+const IA_HABILITADA = false;
+
 // ============================================
 // Helper: enviar mensaje por WhatsApp
 // ============================================
@@ -58,9 +62,6 @@ async function generarRespuesta(
   intencion: string,
   config: any
 ): Promise<string> {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-
-  // Buscar cliente por teléfono
   const { data: cliente } = await supabase
     .from("clientes")
     .select("id, nombre")
@@ -138,6 +139,14 @@ async function generarRespuesta(
 // ============================================
 export async function POST(req: NextRequest) {
   try {
+    // 🚫 Si la IA está desactivada, no hacemos nada
+    if (!IA_HABILITADA) {
+      return ok({
+        respondido: false,
+        motivo: "IA/WhatsApp desactivado. Activá IA_HABILITADA cuando configures Meta."
+      });
+    }
+
     const body = await req.json();
     const { telefono, mensaje, conversacion_id } = body;
 
@@ -145,7 +154,6 @@ export async function POST(req: NextRequest) {
       return ok({ respondido: false, motivo: "Faltan datos" });
     }
 
-    // Verificar si el bot está activo
     const { data: config } = await supabase
       .from("configuracion_descuentos")
       .select("*")
@@ -156,7 +164,6 @@ export async function POST(req: NextRequest) {
       return ok({ respondido: false, motivo: "Bot desactivado" });
     }
 
-    // Detectar intención y generar respuesta
     const intencion = detectarIntencion(mensaje);
     const respuesta = await generarRespuesta(
       telefono,
@@ -165,10 +172,8 @@ export async function POST(req: NextRequest) {
       config
     );
 
-    // Enviar por WhatsApp
     await enviarWhatsApp(telefono, respuesta);
 
-    // Guardar respuesta saliente
     await supabase.from("whatsapp_mensajes").insert({
       telefono,
       direccion: "saliente",
