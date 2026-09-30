@@ -5,6 +5,7 @@ export const clienteSchema = z.object({
   telefono: z.string().max(30).optional().nullable(),
   email: z.string().email().optional().nullable().or(z.literal('')),
   direccion: z.string().optional().nullable(),
+  fecha_nacimiento: z.string().optional().nullable(),
   notas: z.string().optional().nullable(),
   permite_cuenta_corriente: z.boolean().default(false),
   limite_credito: z.number().min(0).default(0)

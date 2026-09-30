@@ -4,6 +4,8 @@ import { handleApiError, ok } from "@/lib/errors";
 export async function GET() {
   try {
     const hoy = new Date();
+
+    // Últimos 6 meses (para el gráfico)
     const meses: any[] = [];
     for (let i = 5; i >= 0; i--) {
       const d = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
@@ -13,6 +15,7 @@ export async function GET() {
     }
 
     const primerDia = meses[0].inicio;
+
     const [ventas, ordenes] = await Promise.all([
       supabase.from("ventas").select("total, fecha").gte("fecha", primerDia),
       supabase.from("ordenes").select("total, fecha").gte("fecha", primerDia)
@@ -26,6 +29,16 @@ export async function GET() {
         .reduce((s, v) => s + Number(v.total), 0);
     }
 
+    // Comparación mes actual vs anterior
+    const mesActual = meses[meses.length - 1].total;
+    const mesAnterior = meses[meses.length - 2].total;
+    const diferencia = mesActual - mesAnterior;
+    const porcentaje = mesAnterior > 0 ? (diferencia / mesAnterior) * 100 : 0;
+
+    // Promedios
+    const promedio = meses.reduce((s, m) => s + m.total, 0) / meses.length;
+
+    // Top productos
     const { data: itemsVentas } = await supabase
       .from("venta_items")
       .select("cantidad, subtotal, producto:productos(nombre)");
@@ -57,6 +70,7 @@ export async function GET() {
       .sort((a, b) => b.total - a.total)
       .slice(0, 10);
 
+    // Top clientes
     const { data: clientesVentas } = await supabase
       .from("ventas")
       .select("total, cliente:clientes(nombre)")
@@ -81,7 +95,18 @@ export async function GET() {
       .sort((a, b) => b.total - a.total)
       .slice(0, 10);
 
-    return ok({ meses, topProductos, topClientes });
+    return ok({
+      meses,
+      topProductos,
+      topClientes,
+      comparacion: {
+        mes_actual: mesActual,
+        mes_anterior: mesAnterior,
+        diferencia,
+        porcentaje: Number(porcentaje.toFixed(2))
+      },
+      promedio
+    });
   } catch (e) {
     return handleApiError(e);
   }

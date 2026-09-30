@@ -1203,3 +1203,128 @@ html, body {
   font-size: 10px !important;
   margin-left: 2px !important;
 }
+
+
+
+
+/* ============================================
+   MODO OSCURO
+   ============================================ */
+[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+[data-theme="dark"] body {
+  background: #0f172a;
+  color: #f1f5f9;
+}
+
+[data-theme="dark"] .form-card,
+[data-theme="dark"] .card,
+[data-theme="dark"] .table-wrapper,
+[data-theme="dark"] .empty-state {
+  background: #1e293b;
+  border-color: #334155;
+  color: #f1f5f9;
+}
+
+[data-theme="dark"] .table thead {
+  background: #0f172a;
+}
+
+[data-theme="dark"] .table th,
+[data-theme="dark"] .table td {
+  border-color: #334155;
+  color: #cbd5e1;
+}
+
+[data-theme="dark"] .table tbody tr:hover {
+  background: #334155;
+}
+
+[data-theme="dark"] .input {
+  background: #0f172a;
+  border-color: #334155;
+  color: #f1f5f9;
+}
+
+[data-theme="dark"] .input::placeholder {
+  color: #64748b;
+}
+
+[data-theme="dark"] .page-title,
+[data-theme="dark"] .card-value,
+[data-theme="dark"] h1,
+[data-theme="dark"] h2,
+[data-theme="dark"] h3 {
+  color: #f1f5f9 !important;
+}
+
+[data-theme="dark"] .page-subtitle,
+[data-theme="dark"] .card-subtitle,
+[data-theme="dark"] .card-title {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .btn-secondary {
+  background: #1e293b;
+  border-color: #334155;
+  color: #cbd5e1;
+}
+
+[data-theme="dark"] .btn-secondary:hover {
+  background: #334155;
+  border-color: #475569;
+}
+
+[data-theme="dark"] .quick-access {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+[data-theme="dark"] .quick-access-title {
+  color: #f1f5f9;
+}
+
+[data-theme="dark"] .quick-access-subtitle {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .empty-state {
+  background: #1e293b;
+}
+
+[data-theme="dark"] [style*="background: white"],
+[data-theme="dark"] [style*="background: \"white\""] {
+  background: #1e293b !important;
+}
+
+/* Botón ThemeToggle */
+.theme-toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  font-size: 18px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  margin: 0 8px;
+}
+
+.theme-toggle-btn:hover {
+  background: rgba(56, 189, 248, 0.25);
+  border-color: rgba(56, 189, 248, 0.5);
+  transform: scale(1.05);
+}
+
+@media (max-width: 1200px) {
+  .theme-toggle-btn {
+    display: none;
+  }
+}

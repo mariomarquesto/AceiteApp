@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
 import BusquedaGlobal from "./BusquedaGlobal";
+import ThemeToggle from "./ThemeToggle";
 
 const linksPrincipales = [
   { href: "/", label: "Inicio", icon: "🏠" },
@@ -17,6 +18,7 @@ const linksPrincipales = [
 
 const linksMas = [
   { href: "/reportes", label: "Reportes", icon: "📈" },
+  { href: "/puntos", label: "Puntos", icon: "🎁" },
   { href: "/clientes-vip", label: "VIP", icon: "🏆" },
   { href: "/vehiculos", label: "Vehículos", icon: "🚗" },
   { href: "/productos", label: "Productos", icon: "📦" },
@@ -107,6 +109,8 @@ export default function Navbar() {
         <div className="navbar-search-wrapper">
           <BusquedaGlobal />
         </div>
+
+        <ThemeToggle />
 
         <Link href="/ventas/nueva" className="navbar-cta">
           <span>+</span>

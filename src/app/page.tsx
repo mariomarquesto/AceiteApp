@@ -6,31 +6,47 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 async function getMetricas() {
+  const hoy = new Date();
+  const hoyStr = hoy.toISOString().slice(0, 10);
+  const en7dias = new Date(hoy.getTime() + 7 * 86400000);
+  const en7diasStr = en7dias.toISOString().slice(0, 10);
+
   const [
     clientes,
     productos,
     stockBajo,
     pagosHoy,
     tareasResumen,
-    ordenesEnProceso
+    ordenesEnProceso,
+    cumplesRaw
   ] = await Promise.all([
     supabase.from("clientes").select("id", { count: "exact", head: true }).eq("activo", true),
     supabase.from("productos").select("id", { count: "exact", head: true }).eq("activo", true),
     supabase.from("v_stock_bajo").select("*").limit(5),
-    supabase.from("pagos").select("monto, medio").gte("fecha", new Date().toISOString().slice(0, 10)),
+    supabase.from("pagos").select("monto, medio").gte("fecha", hoyStr),
     supabase.from("tareas").select("estado, fecha_vencimiento, fecha_completada").eq("estado", "pendiente"),
-    supabase.from("ordenes").select("id", { count: "exact", head: true }).eq("estado", "en_proceso")
+    supabase.from("ordenes").select("id", { count: "exact", head: true }).eq("estado", "en_proceso"),
+    supabase.from("clientes").select("id, nombre, telefono, fecha_nacimiento").not("fecha_nacimiento", "is", null).eq("activo", true)
   ]);
 
-  const hoy = new Date().toISOString().slice(0, 10);
-  const en7dias = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
-
   const tareasPendientes = tareasResumen.data || [];
-  const vencidas = tareasPendientes.filter(t => t.fecha_vencimiento < hoy).length;
-  const hoyTareas = tareasPendientes.filter(t => t.fecha_vencimiento === hoy).length;
-  const proximos7 = tareasPendientes.filter(t => t.fecha_vencimiento > hoy && t.fecha_vencimiento <= en7dias).length;
+  const vencidas = tareasPendientes.filter(t => t.fecha_vencimiento < hoyStr).length;
+  const hoyTareas = tareasPendientes.filter(t => t.fecha_vencimiento === hoyStr).length;
+  const proximos7 = tareasPendientes.filter(t => t.fecha_vencimiento > hoyStr && t.fecha_vencimiento <= en7diasStr).length;
 
   const cobradoHoy = (pagosHoy.data || []).reduce((s, p) => s + Number(p.monto), 0);
+
+  // Calcular cumpleaños próximos (7 días)
+  const proximosCumples = (cumplesRaw.data || [])
+    .map((c: any) => {
+      const cumple = new Date(c.fecha_nacimiento + "T00:00:00");
+      const esteAnio = new Date(hoy.getFullYear(), cumple.getMonth(), cumple.getDate());
+      if (esteAnio < hoy) esteAnio.setFullYear(hoy.getFullYear() + 1);
+      const diasHasta = Math.ceil((esteAnio.getTime() - hoy.getTime()) / 86400000);
+      return { ...c, dias_hasta: diasHasta };
+    })
+    .filter((c: any) => c.dias_hasta >= 0 && c.dias_hasta <= 7)
+    .sort((a: any, b: any) => a.dias_hasta - b.dias_hasta);
 
   return {
     totalClientes: clientes.count || 0,
@@ -43,7 +59,8 @@ async function getMetricas() {
       proximos_7_dias: proximos7,
       completadas_hoy: 0
     },
-    ordenesEnProceso: ordenesEnProceso.count || 0
+    ordenesEnProceso: ordenesEnProceso.count || 0,
+    cumples: proximosCumples
   };
 }
 
@@ -95,6 +112,40 @@ export default async function Home() {
         </div>
       </div>
 
+      {/* ALERTA DE CUMPLEAÑOS */}
+      {m.cumples.length > 0 && (
+        <div style={{
+          background: "linear-gradient(135deg, #fef3c7, #fde68a)",
+          border: "2px solid #f59e0b",
+          borderRadius: 14,
+          padding: 18,
+          marginBottom: 20,
+          display: "flex",
+          alignItems: "center",
+          gap: 16,
+          flexWrap: "wrap",
+          boxShadow: "0 4px 16px rgba(245,158,11,0.25)"
+        }}>
+          <div style={{ fontSize: 42 }}>🎂</div>
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <div style={{ fontWeight: 800, color: "#78350f", fontSize: 17 }}>
+              {m.cumples.length} {m.cumples.length === 1 ? "cumpleaños" : "cumpleaños"} esta semana
+            </div>
+            <div style={{ fontSize: 13, color: "#92400e", marginTop: 4 }}>
+              {m.cumples.slice(0, 3).map((c: any, i: number) => (
+                <span key={c.id}>
+                  {i > 0 && " · "}
+                  <strong>{c.nombre}</strong>
+                  {" "}({c.dias_hasta === 0 ? "¡HOY!" : c.dias_hasta === 1 ? "mañana" : `en ${c.dias_hasta} días`})
+                </span>
+              ))}
+              {m.cumples.length > 3 && ` · +${m.cumples.length - 3} más`}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ALERTA DE TAREAS VENCIDAS */}
       {m.tareas.vencidas > 0 && (
         <Link href="/tareas" style={{ textDecoration: "none" }}>
           <div style={{
@@ -123,6 +174,7 @@ export default async function Home() {
         </Link>
       )}
 
+      {/* MÉTRICAS */}
       <div className="dashboard-grid" style={{ marginBottom: 32 }}>
         <Card title="Clientes" value={m.totalClientes} icon="👥" color="#0ea5e9" subtitle="Registrados" />
         <Card title="Órdenes activas" value={m.ordenesEnProceso} icon="🔧" color="#8b5cf6" subtitle="En proceso" />
@@ -130,6 +182,7 @@ export default async function Home() {
         <Card title="Tareas pendientes" value={totalTareasPendientes} icon="📋" color={m.tareas.vencidas > 0 ? "#ef4444" : "#f59e0b"} subtitle={m.tareas.vencidas > 0 ? m.tareas.vencidas + " vencidas" : "Al día"} />
       </div>
 
+      {/* ACCESOS RÁPIDOS */}
       <h2 style={{ fontSize: 18, fontWeight: 700, color: "#0f172a", marginBottom: 16, letterSpacing: -0.3 }}>
         ⚡ Accesos rápidos
       </h2>

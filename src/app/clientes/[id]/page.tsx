@@ -61,6 +61,7 @@ export default function EditarCliente() {
           telefono: form.telefono || null,
           email: form.email || null,
           direccion: form.direccion || null,
+          fecha_nacimiento: form.fecha_nacimiento || null,
           notas: form.notas || null,
           permite_cuenta_corriente: form.permite_cuenta_corriente,
           limite_credito: Number(form.limite_credito) || 0
@@ -341,6 +342,19 @@ export default function EditarCliente() {
             value={form.direccion || ""}
             onChange={e => setForm({ ...form, direccion: e.target.value })}
           />
+        </div>
+
+        <div className="form-group">
+          <label className="form-label">Fecha de nacimiento 🎂</label>
+          <input
+            type="date"
+            className="input"
+            value={form.fecha_nacimiento || ""}
+            onChange={e => setForm({ ...form, fecha_nacimiento: e.target.value })}
+          />
+          <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 4 }}>
+            Opcional — para promociones de cumpleaños
+          </div>
         </div>
 
         <div className="form-group">
